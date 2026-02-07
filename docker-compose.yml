@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  # Compresion Frontend (Static Build)
+  compresion-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000
+    container_name: compresion-frontend
+    ports:
+      - "3007:80"
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  default:
+    driver: bridge
