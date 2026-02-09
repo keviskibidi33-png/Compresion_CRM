@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { useForm, useFieldArray, useWatch, Control } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useFormPersist } from '../hooks/use-form-persist';
 import { CompressionExportRequest, compressionApi } from '../services/api';
 import toast from 'react-hot-toast';
-import { PlusIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'; // Using 24 instead of updated naming if v1 or v2
+import { PlusIcon, TrashIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CheckCircle2, XCircle, FileText, Loader2, Search } from 'lucide-react';
 
 interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> {
     items: {
@@ -13,6 +15,10 @@ interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> 
         carga_maxima?: number;
         tipo_fractura?: string;
         defectos?: string;
+        defectos_custom?: string;
+        // New fields
+        diametro?: number;
+        area?: number;
         realizado?: string;
         revisado?: string;
         fecha_revisado?: string;
@@ -21,12 +27,199 @@ interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> 
     }[];
 }
 
+// Personnel options
+const REALIZADO_OPTIONS = ['Deyvi Infanzon', 'Ivan Chancon'];
+const REVISADO_OPTIONS = ['Fabian la Rosa', 'Irma Coaquira'];
+const APROBADO_OPTIONS = ['Fabian la Rosa', 'Irma Coaquira'];
+const DEFECTOS_OPTIONS = ['A', 'B', 'C', 'D', 'E'];
+const TIPO_FRACTURA_OPTIONS = ['1', '2', '3', '4', '5', '6'];
+
+// Custom date input component with XX/XX/26 format and autocomplete
+const DateInput: React.FC<{
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    className?: string;
+}> = ({ value, onChange, placeholder = 'dd/mm/aa', className }) => {
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let input = e.target.value;
+
+        // Only allow digits and slashes
+        input = input.replace(/[^\d/]/g, '');
+
+        // Get only digits for processing
+        const digitsOnly = input.replace(/\D/g, '');
+
+        // Build formatted string with auto-slashes
+        let formatted = '';
+        for (let i = 0; i < digitsOnly.length && i < 6; i++) {
+            if (i === 2 || i === 4) {
+                formatted += '/';
+            }
+            formatted += digitsOnly[i];
+        }
+
+        // Auto-complete year "26" when user has typed dd/mm (4 digits)
+        if (digitsOnly.length === 4) {
+            formatted += '/26';
+        }
+
+        onChange(formatted);
+    };
+
+    return (
+        <input
+            type="text"
+            value={value || ''}
+            onChange={handleChange}
+            placeholder={placeholder}
+            className={className}
+            maxLength={8}
+        />
+    );
+};
+
+// Custom Codigo LEM input with XXX-CO-26 autocomplete on blur
+const CodigoLemInput: React.FC<{
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    className?: string;
+}> = ({ value, onChange, placeholder = 'XXX-CO-26', className }) => {
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Allow free typing - just convert to uppercase
+        let input = e.target.value.toUpperCase();
+        onChange(input);
+    };
+
+    // Autocomplete on blur - always append -CO-26 if not already present
+    const handleBlur = () => {
+        if (value) {
+            const trimmed = value.trim();
+            // Only autocomplete if doesn't already end with -CO-26
+            if (trimmed && !trimmed.endsWith('-CO-26')) {
+                onChange(trimmed + '-CO-26');
+            }
+        }
+    };
+
+    return (
+        <input
+            type="text"
+            value={value || ''}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            className={className}
+        />
+    );
+};
+
+// Custom Recepcion input with REC-XXX-26 autocomplete on blur
+const RecepcionInput: React.FC<{
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    className?: string;
+}> = ({ value, onChange, placeholder = 'REC-XXX-26', className }) => {
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let input = e.target.value.toUpperCase();
+        onChange(input);
+    };
+
+    const handleBlur = () => {
+        if (value) {
+            const trimmed = value.trim();
+            // Add REC- prefix if not present
+            let result = trimmed;
+            if (!trimmed.startsWith('REC-')) {
+                result = 'REC-' + trimmed;
+            }
+            // Add -26 suffix if not present
+            if (!result.endsWith('-26')) {
+                result = result + '-26';
+            }
+            onChange(result);
+        }
+    };
+
+    return (
+        <input
+            type="text"
+            value={value || ''}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            className={className}
+        />
+    );
+};
+
+// Custom OT input with OT-XXX-26 autocomplete on blur
+const OTInput: React.FC<{
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    className?: string;
+}> = ({ value, onChange, placeholder = 'OT-XXX-26', className }) => {
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let input = e.target.value.toUpperCase();
+        onChange(input);
+    };
+
+    const handleBlur = () => {
+        if (value) {
+            const trimmed = value.trim();
+            // Add OT- prefix if not present
+            let result = trimmed;
+            if (!trimmed.startsWith('OT-')) {
+                result = 'OT-' + trimmed;
+            }
+            // Add -26 suffix if not present
+            if (!result.endsWith('-26')) {
+                result = result + '-26';
+            }
+            onChange(result);
+        }
+    };
+
+    return (
+        <input
+            type="text"
+            value={value || ''}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            className={className}
+        />
+    );
+};
+
 const CompressionForm: React.FC = () => {
-    const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<CompressionFormInputs>({
+    const { register, control, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm<CompressionFormInputs>({
         defaultValues: {
-            items: Array.from({ length: 4 }).map((_, i) => ({ item: i + 1, codigo_lem: '' })), // Default 4 rows
+            items: Array.from({ length: 4 }).map((_, i) => ({
+                item: i + 1,
+                codigo_lem: '',
+                fecha_ensayo: '',
+                hora_ensayo: '',
+                carga_maxima: undefined,
+                tipo_fractura: '',
+                defectos: '',
+                defectos_custom: '',
+                realizado: '',
+                revisado: '',
+                fecha_revisado: '',
+                aprobado: '',
+                fecha_aprobado: '',
+            })),
             recepcion_numero: '',
             ot_numero: '',
+            recepcion_id: undefined, // Initialize
         }
     });
 
@@ -35,24 +228,239 @@ const CompressionForm: React.FC = () => {
         name: "items"
     });
 
+    // Track which rows have "Otro" selected for defectos
+    const watchedItems = watch('items');
+
+    // Search status state
+    const [recepcionStatus, setRecepcionStatus] = useState<{
+        estado: 'idle' | 'buscando' | 'disponible' | 'ocupado';
+        mensaje?: string;
+        datos?: any;
+        formatos?: {
+            recepcion: boolean;
+            verificacion: boolean;
+            compresion: boolean;
+        };
+    }>({ estado: 'idle' });
+
+    // Check for ID in URL for Edit Mode
+    const [editId, setEditId] = useState<number | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        const idParam = searchParams.get('id');
+
+        if (idParam) {
+            const id = parseInt(idParam, 10);
+            if (!isNaN(id)) {
+                setEditId(id);
+                loadEnsayo(id);
+            }
+        }
+    }, []);
+
+    const loadEnsayo = async (id: number) => {
+        try {
+            const loadingToast = toast.loading('Cargando datos del ensayo...');
+            const data = await compressionApi.obtenerEnsayo(id);
+
+            // Format dates for form (YYYY-MM-DD -> DD/MM/YY)
+            const formatDateForForm = (isoDate?: string | null) => {
+                if (!isoDate) return '';
+                // Handle different date formats or date objects
+                const dateObj = new Date(isoDate);
+                // Adjust for timezone issues if needed, or just split string if guaranteed YYYY-MM-DD
+                if (typeof isoDate === 'string' && isoDate.includes('-')) {
+                    const [y, m, d] = isoDate.split('T')[0].split('-');
+                    return `${d}/${m}/${y.slice(2)}`;
+                }
+                return '';
+            };
+
+            // Map API response to Form Inputs
+            const formValues: CompressionFormInputs = {
+                recepcion_numero: data.numero_recepcion || '',
+                ot_numero: data.numero_ot || '',
+                recepcion_id: data.recepcion_id, // Load existing ID
+                codigo_equipo: data.codigo_equipo || '',
+                codigo_equipo: data.codigo_equipo || '',
+                otros: data.otros || '',
+                nota: data.nota || '',
+                items: data.items.map((it: any) => ({
+                    item: it.item,
+                    codigo_lem: it.codigo_lem,
+                    fecha_ensayo: formatDateForForm(it.fecha_ensayo),
+                    hora_ensayo: it.hora_ensayo || '',
+                    carga_maxima: it.carga_maxima,
+                    tipo_fractura: it.tipo_fractura,
+                    defectos: it.defectos,
+                    defectos_custom: it.defectos === 'Otro' ? it.defectos : '',
+                    realizado: it.realizado,
+                    revisado: it.revisado,
+                    fecha_revisado: formatDateForForm(it.fecha_revisado),
+                    aprobado: it.aprobado,
+                    fecha_aprobado: formatDateForForm(it.fecha_aprobado),
+
+                    diametro: undefined,
+                    area: undefined
+                }))
+            };
+
+            reset(formValues);
+
+            if (data.numero_recepcion) {
+                buscarRecepcion(data.numero_recepcion);
+            }
+
+            toast.dismiss(loadingToast);
+            toast.success('Datos cargados para edición');
+        } catch (error) {
+            console.error('Error loading ensayo:', error);
+            toast.error('Error al cargar la información del ensayo');
+            setErrorMessage('No se pudo cargar el ensayo solicitado.');
+        }
+    };
+
+    // API Base URL (Vite uses import.meta.env)
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+    // Search recepcion on blur
+    const buscarRecepcion = React.useCallback(async (numero: string) => {
+        if (!numero || numero.length < 3) return;
+
+        setRecepcionStatus({ estado: 'buscando' });
+
+        try {
+            const data = await compressionApi.checkStatus(numero); // Use new standardized endpoint
+
+            if (data.exists) {
+                const isVerificacionDone = data.verificacion?.status === 'completado' || data.verificacion?.status === 'aprobado';
+                const isCompresionDone = data.compresion?.status === 'completado' || data.compresion?.status === 'en_proceso'; // Check comprehensive status
+
+                let estadoFinal: 'ocupado' | 'disponible' = isCompresionDone ? 'ocupado' : 'disponible';
+                let mensajeFinal = isCompresionDone
+                    ? `⚠️ Ensayo ya registrado`
+                    : '✅ Recepción válida - Disponible para ensayo';
+
+                // Warning if Verification is missing
+                if (!isCompresionDone && !isVerificacionDone) {
+                    mensajeFinal = '⚠️ Atención: Falta registro de Verificación ⚠️';
+                }
+
+                setRecepcionStatus({
+                    estado: estadoFinal,
+                    mensaje: mensajeFinal,
+                    formatos: {
+                        recepcion: true, // If exists, reception is done
+                        verificacion: isVerificacionDone,
+                        compresion: isCompresionDone
+                    },
+                    datos: data
+                });
+
+                // Auto-fill OT if available
+                if (data.recepcion?.numero_ot) {
+                    setValue('ot_numero', data.recepcion.numero_ot);
+                }
+
+                // Set recepcion_id for linkage
+                if (data.recepcion?.id) {
+                    setValue('recepcion_id', data.recepcion.id);
+                }
+            } else {
+                setRecepcionStatus({
+                    estado: 'ocupado', // Treat not found as 'ocupado/error' to show Red X
+                    mensaje: '⛔ Recepción no encontrada en el sistema',
+                    formatos: {
+                        recepcion: false,
+                        verificacion: false,
+                        compresion: false
+                    }
+                });
+            }
+
+        } catch (error) {
+            console.error('Error buscando recepción:', error);
+            setRecepcionStatus({
+                estado: 'disponible', // Fallback to allow manual entry if API fails? Or block?
+                mensaje: '⚠️ Error de conexión - Verifique manualmente'
+            });
+        }
+    }, [setValue]);
+
+    // Memoize form methods to avoid re-triggering persistence effects
+    const formMethodsMemo = React.useMemo(() => ({
+        watch,
+        setValue,
+        reset: (values: any) => {
+            if (values.recepcion_numero) {
+                buscarRecepcion(values.recepcion_numero);
+            }
+            return reset(values);
+        }
+    }), [watch, setValue, reset, buscarRecepcion]);
+
+    // Local Storage Persistence
+    const { clearSavedData, hasSavedData } = useFormPersist("compresion-form-draft", formMethodsMemo as any);
+
+    const handleClearForm = () => {
+        clearSavedData();
+        reset({
+            recepcion_numero: '',
+            ot_numero: '',
+            recepcion_id: undefined,
+            items: [{ item: 1, codigo_lem: '' }],
+            items: [{ item: 1, codigo_lem: '' }],
+            codigo_equipo: '',
+            otros: '',
+            nota: ''
+        });
+        setRecepcionStatus({ estado: 'idle', mensaje: '', datos: null, formatos: undefined });
+    };
+
+    const formatDateToISO = (dateStr?: string) => {
+        if (!dateStr || !dateStr.includes('/')) return undefined;
+        const parts = dateStr.split('/');
+        if (parts.length !== 3) return undefined;
+        const [day, month, year] = parts;
+        // Assume year '26' -> '2026'
+        const fullYear = year.length === 2 ? `20${year}` : year;
+        return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    };
+
     const onSubmit = async (data: CompressionFormInputs) => {
         try {
-            const loadingToast = toast.loading('Generando Excel...');
+            const loadingToast = toast.loading('Guardando y generando Excel...');
 
-            // Convert to API expected types (ensure numbers are numbers)
-            const apiData: CompressionExportRequest = {
+            // Prepare data with correct formats
+            const apiData = {
                 ...data,
                 items: data.items.map(it => ({
                     ...it,
                     item: Number(it.item),
+                    // Convert DD/MM/YY to YYYY-MM-DD for backend
+                    fecha_ensayo: formatDateToISO(it.fecha_ensayo),
+                    fecha_revisado: formatDateToISO(it.fecha_revisado),
+                    fecha_aprobado: formatDateToISO(it.fecha_aprobado),
                     carga_maxima: it.carga_maxima ? Number(it.carga_maxima) : undefined,
-                    fecha_ensayo: it.fecha_ensayo || undefined,
-                    fecha_revisado: it.fecha_revisado || undefined,
-                    fecha_aprobado: it.fecha_aprobado || undefined,
+                    defectos: it.defectos === 'Otro' ? it.defectos_custom : it.defectos,
+                    diametro: it.diametro ? Number(it.diametro) : undefined,
+                    area: it.area ? Number(it.area) : undefined,
                 }))
             };
 
-            const blob = await compressionApi.exportarExcel(apiData);
+            // 1. Save to Database first
+            try {
+                // Pass editId if updating
+                await compressionApi.guardarEnsayo(apiData, editId || undefined);
+            } catch (saveError) {
+                console.error('Error saving to DB:', saveError);
+                toast.error('Error al guardar en base de datos, pero intentando generar Excel...');
+            }
+
+            // 2. Export to Excel
+            const blob = await compressionApi.exportarExcel(apiData as any);
 
             // Create download link
             const url = window.URL.createObjectURL(blob);
@@ -64,44 +472,173 @@ const CompressionForm: React.FC = () => {
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
 
-            toast.success('Excel generado exitosamente!', { id: loadingToast });
-        } catch (error) {
+            toast.success('Ensayo guardado y Excel generado exitosamente!', { id: loadingToast });
+            if (!editId) {
+                handleClearForm(); // Only clear if creating new, keep form if editing
+            }
+        } catch (error: any) {
             console.error(error);
-            toast.error('Error al generar Excel');
+            // Show more detailed error for 422
+            const detail = error.response?.data?.detail;
+            let msg = 'Error al procesar el ensayo';
+            if (detail) {
+                msg += ': ' + (typeof detail === 'string' ? detail : JSON.stringify(detail));
+            }
+            toast.error(msg);
         }
+    };
+
+    const handleCloseModal = () => {
+        window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*');
     };
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
             <header className="bg-white shadow-sm p-4">
-                <div className="max-w-7xl mx-auto flex justify-between items-center">
+                <div className="max-w-full mx-auto flex justify-between items-center px-4">
                     <h1 className="text-xl font-bold text-gray-900">Módulo de Compresión de Concreto</h1>
+                    <div className="flex items-center space-x-2">
+                        {/* Saving Indicator / Clear Draft */}
+                        {hasSavedData && (
+                            <div className="flex items-center mr-4 animate-in fade-in duration-300 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                                <span className="text-xs text-amber-700 mr-2 font-medium">Borrador guardado</span>
+                                <button
+                                    type="button"
+                                    onClick={handleClearForm}
+                                    className="p-1 text-amber-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                    title="Descartar borrador y limpiar formulario"
+                                >
+                                    <TrashIcon className="h-4 w-4" />
+                                </button>
+                            </div>
+                        )}
+                        <button
+                            type="button"
+                            onClick={handleCloseModal}
+                            className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                            title="Cerrar"
+                        >
+                            <XMarkIcon className="h-6 w-6" />
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8">
+            <main className="flex-1 w-full px-4 py-6">
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
                     {/* Header Section */}
-                    <div className="bg-white shadow rounded-lg p-6">
+                    <div className="bg-white shadow rounded-lg p-6 relative">
+                        {editId && (
+                            <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg text-xs font-bold uppercase shadow-sm z-10">
+                                Modo Edición - ID: {editId}
+                            </div>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">N° Recepción</label>
-                                <input
-                                    type="text"
-                                    {...register('recepcion_numero', { required: 'Requerido' })}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                    placeholder="Ej: REC-2023-001"
-                                />
-                                {errors.recepcion_numero && <span className="text-red-500 text-xs">{errors.recepcion_numero.message}</span>}
+                                <label className="block text-sm font-medium text-gray-700 mb-1">N° Recepción</label>
+                                <div className="flex items-center gap-2">
+                                    <Controller
+                                        name="recepcion_numero"
+                                        control={control}
+                                        rules={{ required: 'Requerido' }}
+                                        render={({ field }) => (
+                                            <input
+                                                type="text"
+                                                value={field.value || ''}
+                                                onChange={(e) => {
+                                                    const input = e.target.value.toUpperCase();
+                                                    field.onChange(input);
+                                                }}
+                                                onBlur={(e) => {
+                                                    let value = e.target.value.trim().toUpperCase();
+
+                                                    if (!value) {
+                                                        field.onChange('');
+                                                        return;
+                                                    }
+
+                                                    // 1. Add REC- prefix if missing
+                                                    if (!value.startsWith('REC-')) {
+                                                        value = 'REC-' + value;
+                                                    }
+
+                                                    // 2. Smart Suffix Logic
+                                                    // Allow custom suffixes like -A, -1, or manual -25
+                                                    // Regex checks if it ends with -DIGITS or -DIGITS-ALPHANUM
+                                                    const hasYearSuffix = /-\d{2}$/.test(value);
+                                                    const hasExtendedSuffix = /-\d{2}-[A-Z0-9]+$/.test(value);
+
+                                                    if (!hasYearSuffix && !hasExtendedSuffix) {
+                                                        value = value + '-26';
+                                                    }
+
+                                                    field.onChange(value);
+                                                    // Buscar en DB
+                                                    buscarRecepcion(value);
+                                                }}
+                                                placeholder="REC-XXX-26"
+                                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border"
+                                                style={{ paddingRight: '120px' }}
+                                            />
+                                        )}
+                                    />
+                                    {/* Status Indicator with Icons */}
+                                    <div className="absolute right-2 top-8 flex items-center justify-end min-w-[100px]">
+                                        {recepcionStatus.estado === 'buscando' && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-full border border-blue-100 animate-pulse">
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                <span className="text-[9px] font-black uppercase tracking-tighter">Buscando...</span>
+                                            </div>
+                                        )}
+                                        {recepcionStatus.estado === 'disponible' && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-sm animate-in fade-in zoom-in duration-300 transition-colors bg-emerald-50 text-emerald-600 border-emerald-100">
+                                                <CheckCircle2 className="h-3 w-3" />
+                                                <span className="text-[10px] font-black uppercase tracking-tighter">Disponible</span>
+                                            </div>
+                                        )}
+                                        {recepcionStatus.estado === 'ocupado' && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full border border-rose-100 shadow-sm animate-in fade-in zoom-in duration-300">
+                                                <XCircle className="h-3 w-3" />
+                                                <span className="text-[9px] font-black uppercase tracking-tighter">Ocupado</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Status Breakdown (Formatos) - Moved below input */}
+                                    {/* Status Breakdown (Formatos) - Moved below input */}
+                                    <div className="mt-1 flex flex-col gap-1 items-end">
+                                        {recepcionStatus.formatos && (
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter mr-1 italic">Formatos:</span>
+                                                <div className={`flex items-center justify-center w-7 h-4 rounded text-[8px] font-black border transition-colors ${recepcionStatus.formatos.recepcion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>REC</div>
+                                                <div className={`flex items-center justify-center w-7 h-4 rounded text-[8px] font-black border transition-colors ${recepcionStatus.formatos.verificacion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>VER</div>
+                                                <div className={`flex items-center justify-center w-7 h-4 rounded text-[8px] font-black border transition-colors ${recepcionStatus.formatos.compresion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>COM</div>
+                                            </div>
+                                        )}
+                                        {recepcionStatus.mensaje && (
+                                            <div className={`text-right text-[9px] font-black italic uppercase tracking-tighter ${recepcionStatus.estado === 'ocupado' ? 'text-rose-500' : 'text-slate-400/80'}`}>
+                                                {recepcionStatus.mensaje}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                {errors.recepcion_numero && <span className="text-red-500 text-xs mt-1 block font-medium">{errors.recepcion_numero.message}</span>}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">N° OT</label>
-                                <input
-                                    type="text"
-                                    {...register('ot_numero', { required: 'Requerido' })}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                    placeholder="Ej: OT-12345"
+                                <label className="block text-sm font-medium text-gray-700 mb-1">N° OT</label>
+                                <Controller
+                                    name="ot_numero"
+                                    control={control}
+                                    rules={{ required: 'Requerido' }}
+                                    render={({ field }) => (
+                                        <OTInput
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            placeholder="OT-XXX-26"
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border"
+                                        />
+                                    )}
                                 />
                                 {errors.ot_numero && <span className="text-red-500 text-xs">{errors.ot_numero.message}</span>}
                             </div>
@@ -110,135 +647,228 @@ const CompressionForm: React.FC = () => {
 
                     {/* Items Table */}
                     <div className="bg-white shadow rounded-lg overflow-hidden">
-                        <div className="px-4 py-5 sm:px-6 flex justify-between items-center bg-gray-50 border-b border-gray-200">
+                        <div className="px-6 py-4 flex justify-between items-center bg-gray-50 border-b border-gray-200">
                             <h3 className="text-lg leading-6 font-medium text-gray-900">Items de Ensayo</h3>
                             <button
                                 type="button"
-                                onClick={() => append({ item: fields.length + 1, codigo_lem: '' })}
-                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                onClick={() => append({
+                                    item: fields.length + 1,
+                                    codigo_lem: '',
+                                    fecha_ensayo: '',
+                                    hora_ensayo: '',
+                                    carga_maxima: undefined,
+                                    tipo_fractura: '',
+                                    defectos: '',
+                                    defectos_custom: '',
+                                    realizado: '',
+                                    revisado: '',
+                                    fecha_revisado: '',
+                                    aprobado: '',
+                                    fecha_aprobado: '',
+                                })}
+                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             >
-                                <PlusIcon className="h-4 w-4 mr-1" /> Agregar Fila
+                                <PlusIcon className="h-4 w-4 mr-2" /> Agregar Fila
                             </button>
                         </div>
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                            <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1400px' }}>
+                                <thead className="bg-gray-100">
                                     <tr>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Código LEM</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Ensayo</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Carga Máx (KN)</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Fractura</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Defectos</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Realizado</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revisado</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">F. Rev.</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aprobado</th>
-                                        <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">F. Apr.</th>
-                                        <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">Item</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Código LEM</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">Fecha Ensayo</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Hora</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Carga Máx (KN)</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Tipo Fractura</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-40">Defectos</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Realizado</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Revisado</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">F. Revisado</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Aprobado</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">F. Aprobado</th>
+                                        <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {fields.map((field, index) => (
                                         <tr key={field.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 w-12">
+                                            {/* Item Number */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
                                                 <input
                                                     type="number"
                                                     {...register(`items.${index}.item` as const)}
-                                                    className="block w-full border-0 p-0 text-gray-900 placeholder-gray-500 focus:ring-0 sm:text-sm bg-transparent"
+                                                    className="block w-14 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border text-center"
                                                 />
                                             </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+
+                                            {/* Código LEM */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <Controller
+                                                    name={`items.${index}.codigo_lem` as const}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <CodigoLemInput
+                                                            value={field.value || ''}
+                                                            onChange={field.onChange}
+                                                            placeholder="XXX-CO-26"
+                                                            className="block w-28 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                        />
+                                                    )}
+                                                />
+                                            </td>
+
+                                            {/* Fecha Ensayo */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <Controller
+                                                    name={`items.${index}.fecha_ensayo` as const}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <DateInput
+                                                            value={field.value || ''}
+                                                            onChange={field.onChange}
+                                                            placeholder="dd/mm/aa"
+                                                            className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                        />
+                                                    )}
+                                                />
+                                            </td>
+
+                                            {/* Hora Ensayo */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
                                                 <input
                                                     type="text"
-                                                    {...register(`items.${index}.codigo_lem` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border"
-                                                />
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                                <input
-                                                    type="date"
-                                                    {...register(`items.${index}.fecha_ensayo` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border"
-                                                />
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                                <input
-                                                    type="time"
                                                     {...register(`items.${index}.hora_ensayo` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border"
+                                                    placeholder="0000"
+                                                    className="block w-16 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                    inputMode="numeric"
                                                 />
                                             </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+
+                                            {/* Carga Máxima */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
                                                 <input
                                                     type="number"
                                                     step="0.01"
                                                     {...register(`items.${index}.carga_maxima` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border w-20"
+                                                    className="block w-20 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                 />
                                             </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+
+                                            {/* Tipo Fractura */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
                                                 <select
                                                     {...register(`items.${index}.tipo_fractura` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border w-24"
+                                                    className="block w-20 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                 >
                                                     <option value="">Sel.</option>
-                                                    <option value="1">1</option>
-                                                    <option value="2">2</option>
-                                                    <option value="3">3</option>
-                                                    <option value="4">4</option>
-                                                    <option value="5">5</option>
-                                                    <option value="6">6</option>
+                                                    {TIPO_FRACTURA_OPTIONS.map(opt => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
                                                 </select>
                                             </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                                <input
-                                                    type="text"
-                                                    {...register(`items.${index}.defectos` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border"
-                                                />
+
+                                            {/* Defectos - Dropdown with separate custom input */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <div className="flex gap-2 items-center">
+                                                    <select
+                                                        {...register(`items.${index}.defectos` as const)}
+                                                        className="block w-20 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                    >
+                                                        <option value="">Sel.</option>
+                                                        {DEFECTOS_OPTIONS.map(opt => (
+                                                            <option key={opt} value={opt}>{opt}</option>
+                                                        ))}
+                                                        <option value="Otro">Otro</option>
+                                                    </select>
+                                                    {watchedItems?.[index]?.defectos === 'Otro' && (
+                                                        <input
+                                                            type="text"
+                                                            {...register(`items.${index}.defectos_custom` as const)}
+                                                            placeholder="Escribir..."
+                                                            className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                        />
+                                                    )}
+                                                </div>
                                             </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                                <input
-                                                    type="text"
+
+                                            {/* Realizado */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <select
                                                     {...register(`items.${index}.realizado` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border w-20"
-                                                />
+                                                    className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                >
+                                                    <option value="">Seleccionar...</option>
+                                                    {REALIZADO_OPTIONS.map(opt => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
                                             </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                                <input
-                                                    type="text"
+
+                                            {/* Revisado */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <select
                                                     {...register(`items.${index}.revisado` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border w-20"
+                                                    className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                >
+                                                    <option value="">Seleccionar...</option>
+                                                    {REVISADO_OPTIONS.map(opt => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
+                                            </td>
+
+                                            {/* Fecha Revisado */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <Controller
+                                                    name={`items.${index}.fecha_revisado` as const}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <DateInput
+                                                            value={field.value || ''}
+                                                            onChange={field.onChange}
+                                                            placeholder="dd/mm/aa"
+                                                            className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                        />
+                                                    )}
                                                 />
                                             </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                                <input
-                                                    type="date"
-                                                    {...register(`items.${index}.fecha_revisado` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border"
-                                                />
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                                <input
-                                                    type="text"
+
+                                            {/* Aprobado */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <select
                                                     {...register(`items.${index}.aprobado` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border w-20"
+                                                    className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                >
+                                                    <option value="">Seleccionar...</option>
+                                                    {APROBADO_OPTIONS.map(opt => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
+                                            </td>
+
+                                            {/* Fecha Aprobado */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <Controller
+                                                    name={`items.${index}.fecha_aprobado` as const}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <DateInput
+                                                            value={field.value || ''}
+                                                            onChange={field.onChange}
+                                                            placeholder="dd/mm/aa"
+                                                            className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                        />
+                                                    )}
                                                 />
                                             </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                                <input
-                                                    type="date"
-                                                    {...register(`items.${index}.fecha_aprobado` as const)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1 border"
-                                                />
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
+
+                                            {/* Delete Button */}
+                                            <td className="px-4 py-3 whitespace-nowrap text-center">
                                                 <button
                                                     type="button"
                                                     onClick={() => remove(index)}
-                                                    className="text-red-600 hover:text-red-900"
+                                                    className="text-red-600 hover:text-red-900 p-1"
                                                 >
                                                     <TrashIcon className="h-5 w-5" />
                                                 </button>
@@ -254,38 +884,45 @@ const CompressionForm: React.FC = () => {
                     <div className="bg-white shadow rounded-lg p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Código Equipo Utilizado</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Código Equipo Utilizado</label>
                                 <input
                                     type="text"
                                     {...register('codigo_equipo')}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Otros (35 I-J)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Otros (35 I-J)</label>
                                 <input
                                     type="text"
                                     {...register('otros')}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border"
                                 />
                             </div>
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700">Nota (37 D)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nota (37 D)</label>
                                 <textarea
                                     {...register('nota')}
                                     rows={3}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border"
                                 />
                             </div>
                         </div>
                     </div>
 
                     {/* Submit Button */}
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-4">
+                        <button
+                            type="button"
+                            onClick={handleCloseModal}
+                            className="inline-flex items-center px-5 py-2.5 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                            Cancelar
+                        </button>
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                            className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                         >
                             {isSubmitting ? (
                                 <>Generando...</>

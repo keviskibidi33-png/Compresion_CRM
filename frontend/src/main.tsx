@@ -15,6 +15,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Routes>
                     <Route path="/" element={<Navigate to="/compresion" replace />} />
                     <Route path="/compresion" element={<CompressionForm />} />
+                    <Route path="/dashboard" element={<CompressionForm />} />
+                    <Route path="*" element={<Navigate to="/compresion" replace />} />
                 </Routes>
             </BrowserRouter>
             <Toaster position="top-right" />

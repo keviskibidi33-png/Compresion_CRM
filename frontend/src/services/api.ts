@@ -35,13 +35,61 @@ export interface CompressionExportRequest {
     codigo_equipo?: string;
     otros?: string;
     nota?: string;
+    recepcion_id?: number; // Added to link with reception
 }
 
 export const compressionApi = {
     exportarExcel: async (data: CompressionExportRequest) => {
-        const response = await api.post('/compresion/export', data, {
+        const response = await api.post('/api/compresion/export', data, {
             responseType: 'blob',
         });
+        return response.data;
+    },
+    guardarEnsayo: async (data: any, id?: number) => {
+        // Prepare data for the backend
+        const backendData = {
+            numero_ot: data.ot_numero,
+            numero_recepcion: data.recepcion_numero,
+            recepcion_id: data.recepcion_id, // Ensure this is sent if available
+            codigo_equipo: data.codigo_equipo,
+            otros: data.otros,
+            nota: data.nota,
+            items: data.items.map((it: any) => ({
+                item: it.item,
+                codigo_lem: it.codigo_lem,
+                fecha_ensayo: it.fecha_ensayo,
+                hora_ensayo: it.hora_ensayo,
+                carga_maxima: it.carga_maxima,
+                tipo_fractura: it.tipo_fractura,
+                defectos: it.defectos,
+                realizado: it.realizado,
+                revisado: it.revisado,
+                fecha_revisado: it.fecha_revisado,
+                aprobado: it.aprobado,
+                fecha_aprobado: it.fecha_aprobado
+            }))
+        };
+
+        if (id) {
+            // Update existing
+            const response = await api.put(`/api/compresion/${id}`, backendData);
+            return response.data;
+        } else {
+            // Create new
+            const response = await api.post('/api/compresion/', backendData);
+            return response.data;
+        }
+    },
+    obtenerEnsayo: async (id: number) => {
+        const response = await api.get(`/api/compresion/${id}`);
+        return response.data;
+    },
+    listarEnsayos: async (skip = 0, limit = 100) => {
+        const response = await api.get(`/api/compresion/?skip=${skip}&limit=${limit}`);
+        return response.data;
+    },
+    checkStatus: async (numero: string): Promise<any> => {
+        const response = await api.get(`/api/tracing/validate/${numero}`);
         return response.data;
     },
 };
