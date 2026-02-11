@@ -28,6 +28,30 @@ export interface CompressionItem {
     fecha_aprobado?: string;
 }
 
+export interface OrdenTrabajo {
+    id: number;
+    numero_ot: string;
+    numero_recepcion: string;
+    items: any[];
+    muestras?: MuestraConcreto[];
+    fecha_recepcion?: string;
+}
+
+export interface MuestraConcreto {
+    id: number;
+    item_numero: number;
+    codigo_muestra: string;
+    codigo_muestra_lem?: string;
+    identificacion_muestra: string;
+    estructura: string;
+    fc_kg_cm2: number;
+    fecha_moldeo: string;
+    hora_moldeo?: string;
+    edad: number;
+    fecha_rotura: string;
+    requiere_densidad: boolean;
+}
+
 export interface CompressionExportRequest {
     recepcion_numero: string;
     ot_numero: string;
@@ -88,7 +112,7 @@ export const compressionApi = {
         const response = await api.get(`/api/compresion/?skip=${skip}&limit=${limit}`);
         return response.data;
     },
-    getOrden: async (id: number) => {
+    getOrden: async (id: number): Promise<OrdenTrabajo> => {
         const response = await api.get(`/api/recepcion/${id}`);
         return response.data;
     },
