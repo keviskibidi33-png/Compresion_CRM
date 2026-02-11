@@ -34,6 +34,35 @@ const APROBADO_OPTIONS = ['Fabian la Rosa', 'Irma Coaquira'];
 const DEFECTOS_OPTIONS = ['A', 'B', 'C', 'D', 'E'];
 const TIPO_FRACTURA_OPTIONS = ['1', '2', '3', '4', '5', '6'];
 
+// Helper to format LEM code with -CO-YY suffix
+const formatLemCode = (value: string): string => {
+    if (!value) return '';
+    const currentYear = new Date().getFullYear().toString().slice(-2);
+    const suffix = `-CO-${currentYear}`;
+    
+    // Normalize input
+    let clean = value.trim().toUpperCase();
+    
+    // Case 1: Just digits (e.g., "1234")
+    if (/^\d+$/.test(clean)) {
+        return `${clean}${suffix}`;
+    }
+    
+    // Case 2: Ends with -CO or -CO- (e.g., "1234-CO" or "1234-CO-")
+    if (clean.endsWith('-CO') || clean.endsWith('-CO-')) {
+        // Remove trailing - or -CO and append full suffix to be safe
+        const base = clean.replace(/-CO-?$/, '');
+        return `${base}${suffix}`;
+    }
+
+    // Case 3: Already has correct suffix
+    if (clean.endsWith(suffix)) {
+        return clean;
+    }
+
+    return clean;
+};
+
 // Custom date input component with XX/XX/26 format and autocomplete
 const DateInput: React.FC<{
     value: string;
@@ -94,13 +123,12 @@ const CodigoLemInput: React.FC<{
         onChange(input);
     };
 
-    // Autocomplete on blur - always append -CO-26 if not already present
+    // Autocomplete on blur using unified logic
     const handleBlur = () => {
         if (value) {
-            const trimmed = value.trim();
-            // Only autocomplete if doesn't already end with -CO-26
-            if (trimmed && !trimmed.endsWith('-CO-26')) {
-                onChange(trimmed + '-CO-26');
+            const formatted = formatLemCode(value);
+            if (formatted !== value) {
+                onChange(formatted);
             }
         }
     };
@@ -403,7 +431,7 @@ const CompressionForm: React.FC = () => {
                 if (samples.length > 0) {
                     const nuevosItems = samples.map((item: any, idx: number) => ({
                         item: idx + 1,
-                        codigo_lem: item.codigo_muestra || item.codigo_muestra_lem || '',
+                        codigo_lem: formatLemCode(item.codigo_muestra || item.codigo_muestra_lem || ''),
                         fecha_ensayo: '',
                         hora_ensayo: '',
                         carga_maxima: undefined,
