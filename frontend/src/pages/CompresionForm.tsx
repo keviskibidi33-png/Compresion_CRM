@@ -284,7 +284,6 @@ const CompressionForm: React.FC = () => {
                 ot_numero: data.numero_ot || '',
                 recepcion_id: data.recepcion_id, // Load existing ID
                 codigo_equipo: data.codigo_equipo || '',
-                codigo_equipo: data.codigo_equipo || '',
                 otros: data.otros || '',
                 nota: data.nota || '',
                 items: data.items.map((it: any) => ({
@@ -454,7 +453,6 @@ const CompressionForm: React.FC = () => {
             recepcion_numero: '',
             ot_numero: '',
             recepcion_id: undefined,
-            items: [{ item: 1, codigo_lem: '' }],
             items: [{ item: 1, codigo_lem: '' }],
             codigo_equipo: '',
             otros: '',
