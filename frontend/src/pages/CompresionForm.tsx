@@ -576,10 +576,11 @@ const CompressionForm: React.FC = () => {
                                 Modo Edición - ID: {editId}
                             </div>
                         )}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">N° Recepción</label>
-                                <div className="flex items-center gap-2">
+                        <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-8 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                            {/* N° Recepción */}
+                            <div className="flex-[2] min-w-0">
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-0.5">N° Recepción</label>
+                                <div className="relative group">
                                     <Controller
                                         name="recepcion_numero"
                                         control={control}
@@ -594,107 +595,112 @@ const CompressionForm: React.FC = () => {
                                                 }}
                                                 onBlur={(e) => {
                                                     let value = e.target.value.trim().toUpperCase();
-
                                                     if (!value) {
                                                         field.onChange('');
                                                         return;
                                                     }
-
-                                                    // 1. Add REC- prefix if missing
                                                     if (!value.startsWith('REC-')) {
                                                         value = 'REC-' + value;
                                                     }
-
-                                                    // 2. Smart Suffix Logic
-                                                    // Allow custom suffixes like -A, -1, or manual -25
-                                                    // Regex checks if it ends with -DIGITS or -DIGITS-ALPHANUM
                                                     const hasYearSuffix = /-\d{2}$/.test(value);
                                                     const hasExtendedSuffix = /-\d{2}-[A-Z0-9]+$/.test(value);
-
                                                     if (!hasYearSuffix && !hasExtendedSuffix) {
                                                         value = value + '-26';
                                                     }
-
                                                     field.onChange(value);
-                                                    // Buscar en DB
                                                     buscarRecepcion(value);
                                                 }}
                                                 placeholder="REC-XXX-26"
-                                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border"
-                                                style={{ paddingRight: '120px' }}
+                                                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white pr-24 transition-all"
                                             />
                                         )}
                                     />
-                                    {/* Status Indicator with Icons */}
-                                    <div className="absolute right-2 top-8 flex items-center justify-end min-w-[100px]">
+                                    {/* Status Indicator inside input container */}
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-end z-10">
                                         {recepcionStatus.estado === 'buscando' && (
-                                            <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-full border border-blue-100 animate-pulse">
+                                            <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100 animate-pulse">
                                                 <Loader2 className="h-3 w-3 animate-spin" />
-                                                <span className="text-[9px] font-black uppercase tracking-tighter">Buscando...</span>
+                                                <span className="text-[8px] font-black uppercase tracking-tighter">...</span>
                                             </div>
                                         )}
                                         {recepcionStatus.estado === 'disponible' && (
-                                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-sm animate-in fade-in zoom-in duration-300 transition-colors bg-emerald-50 text-emerald-600 border-emerald-100">
+                                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md border shadow-sm bg-emerald-50 text-emerald-600 border-emerald-100">
                                                 <CheckCircle2 className="h-3 w-3" />
-                                                <span className="text-[10px] font-black uppercase tracking-tighter">Disponible</span>
+                                                <span className="text-[8px] font-black uppercase tracking-tighter">LISTO</span>
                                             </div>
                                         )}
                                         {recepcionStatus.estado === 'ocupado' && (
-                                            <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full border border-rose-100 shadow-sm animate-in fade-in zoom-in duration-300">
+                                            <div className="flex items-center gap-1 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-md border border-rose-100 shadow-sm">
                                                 <XCircle className="h-3 w-3" />
-                                                <span className="text-[9px] font-black uppercase tracking-tighter">Ocupado</span>
+                                                <span className="text-[8px] font-black uppercase tracking-tighter">EN USO</span>
                                             </div>
-                                        )}
-                                    </div>
-
-                                    {/* Status Breakdown (Formatos) - Moved below input */}
-                                    {/* Status Breakdown (Formatos) - Moved below input */}
-                                    <div className="mt-1 flex flex-col gap-1 items-end">
-                                        {recepcionStatus.formatos && (
-                                            <div className="flex items-center justify-end gap-1.5">
-                                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter mr-1 italic">Formatos:</span>
-                                                <div className={`flex items-center justify-center w-7 h-4 rounded text-[8px] font-black border transition-colors ${recepcionStatus.formatos.recepcion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>REC</div>
-                                                <div className={`flex items-center justify-center w-7 h-4 rounded text-[8px] font-black border transition-colors ${recepcionStatus.formatos.verificacion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>VER</div>
-                                                <div className={`flex items-center justify-center w-7 h-4 rounded text-[8px] font-black border transition-colors ${recepcionStatus.formatos.compresion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>COM</div>
-                                            </div>
-                                        )}
-                                        {recepcionStatus.mensaje && (
-                                            <div className={`text-right text-[9px] font-black italic uppercase tracking-tighter ${recepcionStatus.estado === 'ocupado' ? 'text-rose-500' : 'text-slate-400/80'}`}>
-                                                {recepcionStatus.mensaje}
-                                            </div>
-                                        )}
-                                        {recepcionStatus.estado === 'disponible' && watch('recepcion_id') && watchedItems.length <= 1 && !watchedItems[0]?.codigo_lem && (
-                                            <button
-                                                type="button"
-                                                onClick={importarMuestras}
-                                                className="mt-2 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 text-[10px] font-black rounded-lg border border-blue-100 hover:bg-blue-100 transition-all shadow-sm w-full"
-                                            >
-                                                <PlusIcon className="h-3 w-3" />
-                                                <span>IMPORTAR MUESTRAS DE RECEPCIÓN</span>
-                                            </button>
                                         )}
                                     </div>
                                 </div>
-                                {errors.recepcion_numero && <span className="text-red-500 text-xs mt-1 block font-medium">{errors.recepcion_numero.message}</span>}
+                                {errors.recepcion_numero && <span className="text-red-500 text-[10px] mt-1 block font-medium uppercase">{errors.recepcion_numero.message}</span>}
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">N° OT</label>
-                                <Controller
-                                    name="ot_numero"
-                                    control={control}
-                                    rules={{ required: 'Requerido' }}
-                                    render={({ field }) => (
-                                        <OTInput
-                                            value={field.value || ''}
-                                            onChange={field.onChange}
-                                            placeholder="OT-XXX-26"
-                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border"
-                                        />
+
+                            {/* Traceability Matrix Column */}
+                            <div className="flex-none pt-6 hidden md:block">
+                                <div className="flex flex-col items-center gap-2">
+                                    {recepcionStatus.formatos && (
+                                        <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-gray-100 shadow-sm">
+                                            <div className={`flex items-center justify-center w-8 h-5 rounded text-[9px] font-black border transition-colors ${recepcionStatus.formatos.recepcion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>REC</div>
+                                            <div className={`flex items-center justify-center w-8 h-5 rounded text-[9px] font-black border transition-colors ${recepcionStatus.formatos.verificacion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>VER</div>
+                                            <div className={`flex items-center justify-center w-8 h-5 rounded text-[9px] font-black border transition-colors ${recepcionStatus.formatos.compresion ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>COM</div>
+                                        </div>
                                     )}
-                                />
-                                {errors.ot_numero && <span className="text-red-500 text-xs">{errors.ot_numero.message}</span>}
+                                    {recepcionStatus.mensaje && (
+                                        <div className={`text-center text-[8px] font-black italic uppercase tracking-tighter max-w-[120px] ${recepcionStatus.estado === 'ocupado' ? 'text-rose-500' : 'text-slate-400'}`}>
+                                            {recepcionStatus.mensaje}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* N° OT */}
+                            <div className="flex-[2] min-w-0">
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-0.5">N° OT</label>
+                                <div className="relative">
+                                    <Controller
+                                        name="ot_numero"
+                                        control={control}
+                                        rules={{ required: 'Requerido' }}
+                                        render={({ field }) => (
+                                            <OTInput
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                                placeholder="OT-XXX-26"
+                                                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
+                                            />
+                                        )}
+                                    />
+                                    {/* Link indicator - subtle visual cue that OT is linked to Reception */}
+                                    {watch('recepcion_id') && (
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-500 opacity-50">
+                                            <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 rounded text-[8px] font-bold uppercase tracking-wider border border-emerald-100">
+                                                Vinculado
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                {errors.ot_numero && <span className="text-red-500 text-[10px] mt-1 block uppercase font-medium">{errors.ot_numero.message}</span>}
                             </div>
                         </div>
+
+                        {/* Import Button Section - Full width under the flex row */}
+                        {recepcionStatus.estado === 'disponible' && watch('recepcion_id') && watchedItems.length <= 1 && !watchedItems[0]?.codigo_lem && (
+                            <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <button
+                                    type="button"
+                                    onClick={importarMuestras}
+                                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-blue-600 text-white text-xs font-black rounded-xl hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-[0.98] uppercase tracking-wider"
+                                >
+                                    <PlusIcon className="h-4 w-4" />
+                                    <span>Importar Muestras de Recepción</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Items Table */}
