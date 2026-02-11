@@ -847,7 +847,7 @@ const CompressionForm: React.FC = () => {
                                                     {...register(`items.${index}.tipo_fractura` as const)}
                                                     className="block w-20 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                 >
-                                                    <option value="">Sel.</option>
+                                                    <option value="">-</option>
                                                     {TIPO_FRACTURA_OPTIONS.map(opt => (
                                                         <option key={opt} value={opt}>{opt}</option>
                                                     ))}
@@ -861,7 +861,7 @@ const CompressionForm: React.FC = () => {
                                                         {...register(`items.${index}.defectos` as const)}
                                                         className="block w-20 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                     >
-                                                        <option value="">Sel.</option>
+                                                        <option value="">-</option>
                                                         {DEFECTOS_OPTIONS.map(opt => (
                                                             <option key={opt} value={opt}>{opt}</option>
                                                         ))}
@@ -884,7 +884,7 @@ const CompressionForm: React.FC = () => {
                                                     {...register(`items.${index}.realizado` as const)}
                                                     className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                 >
-                                                    <option value="">Seleccionar...</option>
+                                                    <option value="">-</option>
                                                     {REALIZADO_OPTIONS.map(opt => (
                                                         <option key={opt} value={opt}>{opt}</option>
                                                     ))}
@@ -897,7 +897,7 @@ const CompressionForm: React.FC = () => {
                                                     {...register(`items.${index}.revisado` as const)}
                                                     className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                 >
-                                                    <option value="">Seleccionar...</option>
+                                                    <option value="">-</option>
                                                     {REVISADO_OPTIONS.map(opt => (
                                                         <option key={opt} value={opt}>{opt}</option>
                                                     ))}
@@ -926,7 +926,7 @@ const CompressionForm: React.FC = () => {
                                                     {...register(`items.${index}.aprobado` as const)}
                                                     className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                 >
-                                                    <option value="">Seleccionar...</option>
+                                                    <option value="">-</option>
                                                     {APROBADO_OPTIONS.map(opt => (
                                                         <option key={opt} value={opt}>{opt}</option>
                                                     ))}
