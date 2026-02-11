@@ -389,6 +389,47 @@ const CompressionForm: React.FC = () => {
         }
     }, [setValue]);
 
+    // Función para importar muestras desde la recepción
+    const importarMuestras = async () => {
+        const recepcion_id = watch('recepcion_id');
+        if (!recepcion_id) return;
+
+        try {
+            toast.loading('Importando muestras...');
+            const orden = await compressionApi.getOrden(recepcion_id);
+            toast.dismiss();
+
+            if (orden && orden.items && orden.items.length > 0) {
+                const nuevosItems = orden.items.map((item: any, idx: number) => ({
+                    item: idx + 1,
+                    codigo_lem: item.codigo_muestra || '',
+                    fecha_ensayo: '',
+                    hora_ensayo: '',
+                    carga_maxima: undefined,
+                    tipo_fractura: '',
+                    defectos: '',
+                    defectos_custom: '',
+                    realizado: '',
+                    revisado: '',
+                    fecha_revisado: '',
+                    aprobado: '',
+                    fecha_aprobado: '',
+                    diametro: undefined,
+                    area: undefined
+                }));
+
+                setValue('items', nuevosItems);
+                toast.success(`${nuevosItems.length} muestras importadas correctamente`);
+            } else {
+                toast.error('No se encontraron muestras en esta recepción');
+            }
+        } catch (error) {
+            toast.dismiss();
+            console.error('Error importando muestras:', error);
+            toast.error('Error al importar muestras de recepción');
+        }
+    };
+
     // Memoize form methods to avoid re-triggering persistence effects
     const formMethodsMemo = React.useMemo(() => ({
         watch,
@@ -620,6 +661,16 @@ const CompressionForm: React.FC = () => {
                                             <div className={`text-right text-[9px] font-black italic uppercase tracking-tighter ${recepcionStatus.estado === 'ocupado' ? 'text-rose-500' : 'text-slate-400/80'}`}>
                                                 {recepcionStatus.mensaje}
                                             </div>
+                                        )}
+                                        {recepcionStatus.estado === 'disponible' && watch('recepcion_id') && watchedItems.length <= 1 && !watchedItems[0]?.codigo_lem && (
+                                            <button
+                                                type="button"
+                                                onClick={importarMuestras}
+                                                className="mt-2 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 text-[10px] font-black rounded-lg border border-blue-100 hover:bg-blue-100 transition-all shadow-sm w-full"
+                                            >
+                                                <PlusIcon className="h-3 w-3" />
+                                                <span>IMPORTAR MUESTRAS DE RECEPCIÓN</span>
+                                            </button>
                                         )}
                                     </div>
                                 </div>

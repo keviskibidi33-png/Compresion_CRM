@@ -88,6 +88,10 @@ export const compressionApi = {
         const response = await api.get(`/api/compresion/?skip=${skip}&limit=${limit}`);
         return response.data;
     },
+    getOrden: async (id: number) => {
+        const response = await api.get(`/api/recepcion/${id}`);
+        return response.data;
+    },
     checkStatus: async (numero: string): Promise<any> => {
         const response = await api.get(`/api/tracing/validate/${numero}`);
         return response.data;
