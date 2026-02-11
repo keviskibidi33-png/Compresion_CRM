@@ -29,9 +29,9 @@ interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> 
 
 // Personnel options
 const REALIZADO_OPTIONS = ['Deyvi Infanzon', 'Ivan Chancon'];
-const REVISADO_OPTIONS = ['Fabian la Rosa', 'Irma Coaquira'];
-const APROBADO_OPTIONS = ['Fabian la Rosa', 'Irma Coaquira'];
-const DEFECTOS_OPTIONS = ['A', 'B', 'C', 'D', 'E'];
+const REVISADO_OPTIONS = ['Fabian la Rosa'];
+const APROBADO_OPTIONS = ['Irma Coaquira'];
+const DEFECTOS_OPTIONS = ['Ninguno', 'A', 'B', 'C', 'D', 'E'];
 const TIPO_FRACTURA_OPTIONS = ['1', '2', '3', '4', '5', '6'];
 
 // Helper to format LEM code with -CO-YY suffix
