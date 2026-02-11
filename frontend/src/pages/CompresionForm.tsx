@@ -548,11 +548,11 @@ const CompressionForm: React.FC = () => {
             }
         } catch (error: any) {
             console.error(error);
-            // Show more detailed error for 422
+            // Show more detailed error for 422 or custom ValueError (detail)
             const detail = error.response?.data?.detail;
             let msg = 'Error al procesar el ensayo';
             if (detail) {
-                msg += ': ' + (typeof detail === 'string' ? detail : JSON.stringify(detail));
+                msg = typeof detail === 'string' ? detail : JSON.stringify(detail);
             }
             toast.error(msg);
         }
