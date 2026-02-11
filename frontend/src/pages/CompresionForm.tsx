@@ -399,29 +399,32 @@ const CompressionForm: React.FC = () => {
             const orden = await compressionApi.getOrden(recepcion_id);
             toast.dismiss();
 
-            if (orden && orden.items && orden.items.length > 0) {
-                const nuevosItems = orden.items.map((item: any, idx: number) => ({
-                    item: idx + 1,
-                    codigo_lem: item.codigo_muestra || '',
-                    fecha_ensayo: '',
-                    hora_ensayo: '',
-                    carga_maxima: undefined,
-                    tipo_fractura: '',
-                    defectos: '',
-                    defectos_custom: '',
-                    realizado: '',
-                    revisado: '',
-                    fecha_revisado: '',
-                    aprobado: '',
-                    fecha_aprobado: '',
-                    diametro: undefined,
-                    area: undefined
-                }));
+            if (orden) {
+                const samples = orden.muestras || orden.items || [];
+                if (samples.length > 0) {
+                    const nuevosItems = samples.map((item: any, idx: number) => ({
+                        item: idx + 1,
+                        codigo_lem: item.codigo_muestra || item.codigo_muestra_lem || '',
+                        fecha_ensayo: '',
+                        hora_ensayo: '',
+                        carga_maxima: undefined,
+                        tipo_fractura: '',
+                        defectos: '',
+                        defectos_custom: '',
+                        realizado: '',
+                        revisado: '',
+                        fecha_revisado: '',
+                        aprobado: '',
+                        fecha_aprobado: '',
+                        diametro: undefined,
+                        area: undefined
+                    }));
 
-                setValue('items', nuevosItems);
-                toast.success(`${nuevosItems.length} muestras importadas correctamente`);
-            } else {
-                toast.error('No se encontraron muestras en esta recepción');
+                    setValue('items', nuevosItems);
+                    toast.success(`${nuevosItems.length} muestras importadas correctamente`);
+                } else {
+                    toast.error('No se encontraron muestras en esta recepción');
+                }
             }
         } catch (error) {
             toast.dismiss();
