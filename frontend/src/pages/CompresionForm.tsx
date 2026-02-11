@@ -865,7 +865,7 @@ const CompressionForm: React.FC = () => {
                                                         {DEFECTOS_OPTIONS.map(opt => (
                                                             <option key={opt} value={opt}>{opt}</option>
                                                         ))}
-                                                        <option value="Otro">Otro</option>
+
                                                     </select>
                                                     {watchedItems?.[index]?.defectos === 'Otro' && (
                                                         <input
