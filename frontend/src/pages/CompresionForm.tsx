@@ -744,13 +744,13 @@ const CompressionForm: React.FC = () => {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
                     {/* Header Section */}
-                    <div className="bg-white shadow rounded-lg p-6 relative">
+                    <div className="bg-white shadow rounded-lg p-6 overflow-visible relative">
                         {editId && (
                             <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg text-xs font-bold uppercase shadow-sm z-10">
                                 Modo Edición - ID: {editId}
                             </div>
                         )}
-                        <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-8 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                        <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-8 bg-gray-50/50 p-4 rounded-xl border border-gray-100 overflow-visible">
                             {/* N° Recepción */}
                             <div className="flex-[2] min-w-0">
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-0.5">N° Recepción</label>
@@ -764,7 +764,9 @@ const CompressionForm: React.FC = () => {
                                                 type="text"
                                                 {...field}
                                                 onChange={(e) => {
-                                                    handleRecepcionChange(e.target.value);
+                                                    const val = e.target.value.toUpperCase();
+                                                    field.onChange(val);
+                                                    handleRecepcionChange(val);
                                                 }}
                                                 onBlur={(e) => {
                                                     let value = e.target.value.trim().toUpperCase();
