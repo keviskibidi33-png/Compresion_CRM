@@ -120,6 +120,10 @@ export const compressionApi = {
         const response = await api.get(`/api/tracing/validate/${numero}`);
         return response.data;
     },
+    getSuggestions: async (query: string): Promise<any[]> => {
+        const response = await api.get(`/api/tracing/suggest?q=${query}`);
+        return response.data;
+    },
 };
 
 export default api;
