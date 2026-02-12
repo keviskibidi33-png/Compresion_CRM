@@ -386,15 +386,48 @@ const CompressionForm: React.FC = () => {
                     datos: data
                 });
 
-                // Auto-fill OT if available
-                if (data.recepcion?.numero_ot) {
-                    setValue('ot_numero', data.recepcion.numero_ot);
+                // Auto-fill Logic
+                const datosBackend = data.datos || {};
+
+                // 1. Auto-fill OT if available
+                if (datosBackend.numero_ot) {
+                    setValue('ot_numero', datosBackend.numero_ot);
                 }
 
                 // Set recepcion_id for linkage
-                if (data.recepcion?.id) {
-                    setValue('recepcion_id', data.recepcion.id);
+                if (data.recepcion_id) {
+                    setValue('recepcion_id', data.recepcion_id);
                 }
+
+                // 2. Auto-fill Items/Samples
+                // Only if we don't have items or the first item is empty/default
+                const currentItems = watch('items');
+                const isGridEmpty = currentItems.length <= 1 && !currentItems[0]?.codigo_lem;
+
+                if (isGridEmpty && datosBackend.muestras && datosBackend.muestras.length > 0) {
+                    const nuevosItems = datosBackend.muestras.map((m: any, idx: number) => ({
+                        item: idx + 1,
+                        codigo_lem: formatLemCode(m.codigo_lem || ''),
+                        fecha_ensayo: '',
+                        hora_ensayo: '',
+                        carga_maxima: undefined,
+                        tipo_fractura: '',
+                        defectos: '',
+                        defectos_custom: '',
+                        realizado: '',
+                        revisado: '',
+                        fecha_revisado: '',
+                        aprobado: '',
+                        fecha_aprobado: '',
+                        diametro: undefined,
+                        area: undefined
+                    }));
+
+                    setValue('items', nuevosItems);
+                    toast.success(`${nuevosItems.length} muestras importadas automáticamente`);
+                }
+
+
             } else {
                 setRecepcionStatus({
                     estado: 'ocupado', // Treat not found as 'ocupado/error' to show Red X
@@ -414,7 +447,7 @@ const CompressionForm: React.FC = () => {
                 mensaje: '⚠️ Error de conexión - Verifique manualmente'
             });
         }
-    }, [setValue]);
+    }, [setValue, watch]);
 
     // Función para importar muestras desde la recepción
     const importarMuestras = async () => {
