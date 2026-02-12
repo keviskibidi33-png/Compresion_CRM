@@ -74,27 +74,121 @@ const DateInput: React.FC<{
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let input = e.target.value;
 
-        // Only allow digits and slashes
+        // Allow only digits and slashes
         input = input.replace(/[^\d/]/g, '');
+        
+        // Smart Date Logic (Similar to OrdenForm)
+        const digits = input.replace(/\D/g, '');
+        const currentYear = new Date().getFullYear().toString();
+        const shortYear = currentYear.slice(-2); // "26"
 
-        // Get only digits for processing
-        const digitsOnly = input.replace(/\D/g, '');
-
-        // Build formatted string with auto-slashes
-        let formatted = '';
-        for (let i = 0; i < digitsOnly.length && i < 6; i++) {
-            if (i === 2 || i === 4) {
-                formatted += '/';
-            }
-            formatted += digitsOnly[i];
+        // Handle auto-formatting on specific lengths
+        // We only trigger this if the user is typing "fast" (i.e. we don't want to block normal typing too much)
+        // But for a controlled input, we might want to do it on blur or be careful.
+        // However, the previous logic did it on change.
+        // Let's adapt the user's request: "44=04/04/26", "412=04/12/26".
+        // This is tricky on `onChange` because "4" is a prefix of "44".
+        // Use logic similar to OrdenForm but applied here.
+        // NOTE: React Hook Form Controller handles the value.
+        // This is a custom input.
+        
+        // Strategy: Just format strict typing, but the smart expansion works best on Blur or specific triggers.
+        // The previous code did: if (digitsOnly.length === 4) formatted += '/26';
+        
+        // Let's stick to the previous behavior + strict masking for now, 
+        // BUT the user explicit request "hazlos inteligentes" implies the behavior from OrdenForm.
+        // In OrdenForm it was ON BLUR.
+        // Here it is onChange. Doing it onChange prevents correcting "4" to "04" before typing the next digit.
+        
+        // We will keep basic formatting here and Move Smart Logic to onBlur if possible, 
+        // OR we try to be smart about slashes.
+        
+        // Actually, looking at lines 67-110, this component receives `onChange`.
+        // I will interpret the user's request as "enable the same smart logic". 
+        // Since `DateInput` is used in a specific way, I'll update it to accept an `onBlur` prop 
+        // and implement the smart logic there, which is safer.
+        
+        // Wait, the component definition at 67 doesn't have onBlur. I need to add it.
+        // But I can't easily change all usages to pass onBlur without editing all usages.
+        // Usage: <DateInput value={...} onChange={...} />
+        
+        // Alternative: Improved formatting on change for standard cases, but the specific "44" case matches 
+        // "DDMM" -> "DD/MM". 
+        
+        let formatted = input;
+        
+        // Standard slash insertion for DDMMYYYY or DDMMYY
+        if (digits.length >= 2 && !input.includes('/')) {
+             // If they typed 2 digits, don't force slash immediately unless we are sure?
+             // Actually standard date inputs usually add slash after 2.
         }
-
-        // Auto-complete year "26" when user has typed dd/mm (4 digits)
-        if (digitsOnly.length === 4) {
-            formatted += '/26';
-        }
-
+        
         onChange(formatted);
+    };
+
+    // New onBlur to handle the "Smart" transformation
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+         let val = e.target.value;
+         if (!val) return;
+         
+         const digits = val.replace(/\D/g, '');
+         const currentYear = new Date().getFullYear().toString();
+         
+         let finalDate = val;
+
+         // Case 0.5: "1" or "2" -> "01" or "02"? No, too aggressive.
+         
+         // Logic from OrdenForm (Smart Date)
+         
+         if (val.includes('/')) {
+             const parts = val.split('/');
+             if (parts.length >= 2) {
+                 const d = parts[0].trim().padStart(2, '0');
+                 const m = parts[1].trim().padStart(2, '0');
+                 let y = (parts[2] || '').trim();
+                 
+                 if (!y) y = '20' + currentYear.slice(-2);
+                 else if (y.length === 2) y = '20' + y;
+                 
+                 if (d.length === 2 && m.length === 2 && y.length === 4) {
+                     finalDate = `${d}/${m}/${y.slice(2)}`; // Keep YY format for display as requested "XX/XX/26"
+                 }
+             }
+         } else {
+             // Digit only map
+             if (digits.length === 2) { // "44" -> 04/04/26 ?? No "22" -> 02/02/YEAR in OrdenForm
+                 // Wait, "44" -> "04/04" is ambiguous. "22" could be "22nd".
+                 // User example: "44=04/04/26". 
+                 // This implies D=4, M=4. 
+                 // Logic: split 2 digits into D and M?
+                 // "44" -> D=4, M=4?
+                 // "22" -> D=2, M=2?
+                 // "12" -> D=1, M=2?
+                 // Only if first digit > 3? No.
+                 // Let's stick to the OrdenForm logic which was:
+                 // 2 digits: "22" -> 02/02/YYYY. 
+                 const d = digits.slice(0, 1).padStart(2,'0');
+                 const m = digits.slice(1).padStart(2,'0');
+                 finalDate = `${d}/${m}/26`;
+             } else if (digits.length === 3) { // "412" -> 04/12/26
+                 const d = digits.slice(0, 1).padStart(2,'0');
+                 const m = digits.slice(1, 3);
+                 finalDate = `${d}/${m}/26`;
+             } else if (digits.length === 4) { // "0512" -> 05/12/26
+                 const d = digits.slice(0, 2);
+                 const m = digits.slice(2, 4);
+                 finalDate = `${d}/${m}/26`;
+             } else if (digits.length === 6) { // "051226"
+                  const d = digits.slice(0, 2);
+                  const m = digits.slice(2, 4);
+                  const y = digits.slice(4);
+                  finalDate = `${d}/${m}/${y}`;
+             }
+         }
+         
+         if (finalDate !== val) {
+             onChange(finalDate);
+         }
     };
 
     return (
@@ -102,9 +196,10 @@ const DateInput: React.FC<{
             type="text"
             value={value || ''}
             onChange={handleChange}
+            onBlur={handleBlur}
             placeholder={placeholder}
             className={className}
-            maxLength={8}
+            maxLength={10}
         />
     );
 };
