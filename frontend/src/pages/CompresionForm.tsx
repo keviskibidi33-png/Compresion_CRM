@@ -4,7 +4,7 @@ import { useFormPersist } from '../hooks/use-form-persist';
 import { CompressionExportRequest, compressionApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { PlusIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
-import { CheckCircle2, XCircle, FileText, Loader2, Search } from 'lucide-react';
+import { CheckCircle2, XCircle, FileText, Loader2, Search, Building2, Calendar, Layers } from 'lucide-react';
 
 interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> {
     items: {
@@ -365,6 +365,10 @@ const CompressionForm: React.FC = () => {
             compresion: boolean;
         };
     }>({ estado: 'idle' });
+    
+    // Autocomplete state
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
 
     // Check for ID in URL for Edit Mode
     const [editId, setEditId] = useState<number | null>(null);
@@ -383,23 +387,20 @@ const CompressionForm: React.FC = () => {
         }
     }, []);
 
+    // Helper to format ISO to DD/MM/YY
+    const formatDateForForm = (isoDate?: string | null) => {
+        if (!isoDate) return '';
+        if (typeof isoDate === 'string' && isoDate.includes('-')) {
+            const [y, m, d] = isoDate.split('T')[0].split('-');
+            return `${d}/${m}/${y.slice(2)}`;
+        }
+        return '';
+    };
+
     const loadEnsayo = async (id: number) => {
         try {
             const loadingToast = toast.loading('Cargando datos del ensayo...');
             const data = await compressionApi.obtenerEnsayo(id);
-
-            // Format dates for form (YYYY-MM-DD -> DD/MM/YY)
-            const formatDateForForm = (isoDate?: string | null) => {
-                if (!isoDate) return '';
-                // Handle different date formats or date objects
-                const dateObj = new Date(isoDate);
-                // Adjust for timezone issues if needed, or just split string if guaranteed YYYY-MM-DD
-                if (typeof isoDate === 'string' && isoDate.includes('-')) {
-                    const [y, m, d] = isoDate.split('T')[0].split('-');
-                    return `${d}/${m}/${y.slice(2)}`;
-                }
-                return '';
-            };
 
             // Map API response to Form Inputs
             const formValues: CompressionFormInputs = {
@@ -446,6 +447,31 @@ const CompressionForm: React.FC = () => {
 
     // API Base URL (Vite uses import.meta.env)
     const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+    // Handlers para autocompletado
+    const handleRecepcionChange = async (val: string) => {
+        setValue('recepcion_numero', val.toUpperCase());
+        if (val.length < 2) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        try {
+            const results = await compressionApi.getSuggestions(val);
+            setSuggestions(results);
+            setShowSuggestions(true);
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+        }
+    };
+
+    const handleSelectSuggestion = (s: any) => {
+        setValue('recepcion_numero', s.numero_recepcion);
+        setValue('ot_numero', s.proyecto || ''); // OT often stored in projeto/metadata
+        setShowSuggestions(false);
+        buscarRecepcion(s.numero_recepcion);
+    };
 
     // Search recepcion on blur
     const buscarRecepcion = React.useCallback(async (numero: string) => {
@@ -504,7 +530,7 @@ const CompressionForm: React.FC = () => {
                     const nuevosItems = datosBackend.muestras.map((m: any, idx: number) => ({
                         item: idx + 1,
                         codigo_lem: formatLemCode(m.codigo_lem || ''),
-                        fecha_ensayo: '',
+                        fecha_ensayo: datosBackend.fecha_recepcion ? formatDateForForm(datosBackend.fecha_recepcion) : '',
                         hora_ensayo: '',
                         carga_maxima: undefined,
                         tipo_fractura: '',
@@ -561,7 +587,7 @@ const CompressionForm: React.FC = () => {
                     const nuevosItems = samples.map((item: any, idx: number) => ({
                         item: idx + 1,
                         codigo_lem: formatLemCode(item.codigo_muestra || item.codigo_muestra_lem || ''),
-                        fecha_ensayo: '',
+                        fecha_ensayo: orden.fecha_recepcion ? formatDateForForm(orden.fecha_recepcion) : '',
                         hora_ensayo: '',
                         carga_maxima: undefined,
                         tipo_fractura: '',
@@ -728,7 +754,7 @@ const CompressionForm: React.FC = () => {
                             {/* N° Recepción */}
                             <div className="flex-[2] min-w-0">
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-0.5">N° Recepción</label>
-                                <div className="relative group">
+                                <div className="relative">
                                     <Controller
                                         name="recepcion_numero"
                                         control={control}
@@ -736,10 +762,9 @@ const CompressionForm: React.FC = () => {
                                         render={({ field }) => (
                                             <input
                                                 type="text"
-                                                value={field.value || ''}
+                                                {...field}
                                                 onChange={(e) => {
-                                                    const input = e.target.value.toUpperCase();
-                                                    field.onChange(input);
+                                                    handleRecepcionChange(e.target.value);
                                                 }}
                                                 onBlur={(e) => {
                                                     let value = e.target.value.trim().toUpperCase();
@@ -751,41 +776,77 @@ const CompressionForm: React.FC = () => {
                                                         value = 'REC-' + value;
                                                     }
                                                     const hasYearSuffix = /-\d{2}$/.test(value);
-                                                    const hasExtendedSuffix = /-\d{2}-[A-Z0-9]+$/.test(value);
-                                                    if (!hasYearSuffix && !hasExtendedSuffix) {
+                                                    if (!hasYearSuffix) {
                                                         value = value + '-26';
                                                     }
                                                     field.onChange(value);
+                                                    setTimeout(() => setShowSuggestions(false), 200);
                                                     buscarRecepcion(value);
                                                 }}
                                                 placeholder="REC-XXX-26"
-                                                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white pr-24 transition-all"
+                                                className={`block w-full rounded-xl shadow-sm sm:text-sm p-3 border-2 transition-all duration-200 outline-none ${
+                                                    recepcionStatus.estado === 'disponible' ? 'border-emerald-500 ring-2 ring-emerald-500/20' :
+                                                    recepcionStatus.estado === 'ocupado' ? 'border-rose-500 ring-2 ring-rose-500/20' :
+                                                    'border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10'
+                                                }`}
                                             />
                                         )}
                                     />
-                                    {/* Status Indicator inside input container */}
-                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-end z-10">
-                                        {recepcionStatus.estado === 'buscando' && (
-                                            <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100 animate-pulse">
-                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                                <span className="text-[8px] font-black uppercase tracking-tighter">...</span>
+
+                                    {/* Suggestions Menu */}
+                                    {showSuggestions && suggestions.length > 0 && (
+                                        <div className="absolute left-0 right-0 z-[100] mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-h-72 overflow-y-auto transform origin-top transition-all duration-200 scale-100">
+                                            <div className="bg-slate-50 px-3 py-1.5 border-b border-gray-100 flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                <span>Sugerencias del Sistema</span>
+                                                <span>{suggestions.length} resultados</span>
                                             </div>
-                                        )}
-                                        {recepcionStatus.estado === 'disponible' && (
-                                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md border shadow-sm bg-emerald-50 text-emerald-600 border-emerald-100">
-                                                <CheckCircle2 className="h-3 w-3" />
-                                                <span className="text-[8px] font-black uppercase tracking-tighter">LISTO</span>
-                                            </div>
-                                        )}
-                                        {recepcionStatus.estado === 'ocupado' && (
-                                            <div className="flex items-center gap-1 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-md border border-rose-100 shadow-sm">
-                                                <XCircle className="h-3 w-3" />
-                                                <span className="text-[8px] font-black uppercase tracking-tighter">EN USO</span>
-                                            </div>
-                                        )}
+                                            {suggestions.map((s, i) => {
+                                                const isCompDone = s.estados?.compresion === 'completado';
+                                                const samplesCount = s.muestras_count || 0;
+                                                const receptionDate = s.fecha_recepcion ? s.fecha_recepcion.split('T')[0].split('-').reverse().join('/') : 'N/A';
+                                                
+                                                return (
+                                                    <div 
+                                                        key={i} 
+                                                        onClick={() => handleSelectSuggestion(s)}
+                                                        className="px-4 py-3 hover:bg-blue-50/50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors group"
+                                                    >
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-black text-lg text-slate-800 group-hover:text-blue-600 transition-colors">{s.numero_recepcion}</span>
+                                                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter ${isCompDone ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                                                    {isCompDone ? 'Ocupado' : 'Disponible'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
+                                                                    <Calendar size={10} className="text-slate-400" />
+                                                                    {receptionDate}
+                                                                </div>
+                                                                <div className="flex items-center gap-1 text-[10px] font-bold text-blue-500 bg-blue-50 px-1.5 rounded">
+                                                                    <Layers size={10} />
+                                                                    {samplesCount} {samplesCount === 1 ? 'Muestra' : 'Muestras'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Building2 size={12} className="text-slate-300" />
+                                                            <div className="text-xs font-medium text-slate-500 truncate uppercase">{s.cliente || 'Sin cliente'}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {/* Inline Status Badge */}
+                                    <div className="absolute right-3 top-3 flex items-center gap-2 pointer-events-none">
+                                        {recepcionStatus.estado === 'buscando' && <Loader2 className="h-5 w-5 animate-spin text-blue-500" />}
+                                        {recepcionStatus.estado === 'disponible' && <CheckCircle2 className="h-5 w-5 text-emerald-500 shadow-sm" />}
+                                        {recepcionStatus.estado === 'ocupado' && <XCircle className="h-5 w-5 text-rose-500 shadow-sm" />}
                                     </div>
                                 </div>
-                                {errors.recepcion_numero && <span className="text-red-500 text-[10px] mt-1 block font-medium uppercase">{errors.recepcion_numero.message}</span>}
+                                {errors.recepcion_numero && <span className="text-red-500 text-[10px] mt-1 block font-medium uppercase tracking-wider ml-1">{errors.recepcion_numero.message}</span>}
                             </div>
 
                             {/* Traceability Matrix Column */}
