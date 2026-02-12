@@ -3,7 +3,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useFormPersist } from '../hooks/use-form-persist';
 import { CompressionExportRequest, compressionApi } from '../services/api';
 import toast from 'react-hot-toast';
-import { PlusIcon, TrashIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { CheckCircle2, XCircle, FileText, Loader2, Search } from 'lucide-react';
 
 interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> {
@@ -591,9 +591,7 @@ const CompressionForm: React.FC = () => {
         }
     };
 
-    const handleCloseModal = () => {
-        window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*');
-    };
+
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -615,14 +613,7 @@ const CompressionForm: React.FC = () => {
                                 </button>
                             </div>
                         )}
-                        <button
-                            type="button"
-                            onClick={handleCloseModal}
-                            className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
-                            title="Cerrar"
-                        >
-                            <XMarkIcon className="h-6 w-6" />
-                        </button>
+
                     </div>
                 </div>
             </header>
