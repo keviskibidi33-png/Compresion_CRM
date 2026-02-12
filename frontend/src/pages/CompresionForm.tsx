@@ -457,7 +457,8 @@ const CompressionForm: React.FC = () => {
             const data = await compressionApi.checkStatus(numero); // Use new standardized endpoint
 
             if (data.exists) {
-                const isVerificacionDone = data.verificacion?.status === 'completado' || data.verificacion?.status === 'aprobado';
+                // Relaxed check: 'en_proceso' means the record exists in DB, which satisfies "Falta registro" check
+                const isVerificacionDone = data.verificacion?.status === 'completado' || data.verificacion?.status === 'aprobado' || data.verificacion?.status === 'en_proceso';
                 const isCompresionDone = data.compresion?.status === 'completado' || data.compresion?.status === 'en_proceso'; // Check comprehensive status
 
                 let estadoFinal: 'ocupado' | 'disponible' = isCompresionDone ? 'ocupado' : 'disponible';
