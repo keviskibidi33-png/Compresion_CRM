@@ -763,6 +763,8 @@ const CompressionForm: React.FC = () => {
                                             <input
                                                 type="text"
                                                 {...field}
+                                                autoComplete="off"
+                                                data-lpignore="true"
                                                 onChange={(e) => {
                                                     const val = e.target.value.toUpperCase();
                                                     field.onChange(val);
