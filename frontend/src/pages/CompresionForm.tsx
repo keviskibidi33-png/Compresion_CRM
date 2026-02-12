@@ -740,7 +740,7 @@ const CompressionForm: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-1 w-full px-4 py-6">
+            <main className="flex-1 w-full px-4 py-6 overflow-visible">
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
                     {/* Header Section */}
@@ -752,7 +752,7 @@ const CompressionForm: React.FC = () => {
                         )}
                         <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-8 bg-gray-50/50 p-4 rounded-xl border border-gray-100 overflow-visible">
                             {/* N° Recepción */}
-                            <div className="flex-[2] min-w-0">
+                            <div className="flex-[2] min-w-0 overflow-visible">
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-0.5">N° Recepción</label>
                                 <div className="relative">
                                     <Controller
