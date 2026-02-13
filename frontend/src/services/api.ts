@@ -4,10 +4,25 @@ const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
 });
 
+// Interceptor to attach auth token on every request
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
 // Add response interceptor for better error handling
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        if (error.response?.status === 401 || error.response?.status === 403) {
+            console.error('[Auth] Unauthorized request - token may be expired');
+        }
         console.error('API Error:', error.response?.data || error.message);
         return Promise.reject(error);
     }

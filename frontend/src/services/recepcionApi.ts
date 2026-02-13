@@ -7,6 +7,18 @@ const api = axios.create({
     baseURL: API_BASE_URL,
 });
 
+// Interceptor to attach auth token on every request
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
 export const recepcionApi = {
     listar: async (skip = 0, limit = 100): Promise<RecepcionMuestraData[]> => {
         const response = await api.get('/api/recepcion/', { params: { skip, limit } });
