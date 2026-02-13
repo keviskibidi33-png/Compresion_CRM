@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from 'react-query'
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import CompressionForm from './pages/CompresionForm'
+import { SessionGuard } from './components/SessionGuard'
 import './index.css'
 
 const queryClient = new QueryClient()
@@ -26,6 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <QueryClientProvider client={queryClient}>
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <TokenHandler />
+                <SessionGuard />
                 <Routes>
                     <Route path="/" element={<Navigate to="/compresion" replace />} />
                     <Route path="/compresion" element={<CompressionForm />} />
