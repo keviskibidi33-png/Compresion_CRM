@@ -21,7 +21,7 @@ const steps = [
     { id: 'ORDEN_TRABAJO', label: 'O. Trabajo', icon: WrenchScrewdriverIcon },
     { id: 'VERIFICACION', label: 'Verificación', icon: DocumentCheckIcon },
     { id: 'CONTROL', label: 'Control', icon: BeakerIcon },
-    { id: 'INFORME', label: 'Informe', icon: CheckCircleIcon },
+    { id: 'INFORME', label: 'Formato', icon: CheckCircleIcon },
 ];
 
 const ProgressStepper: React.FC<StepperProps> = ({ currentStep, isLockedByClient = false }) => {

@@ -586,7 +586,7 @@ const CompressionForm: React.FC = () => {
                 if (samples.length > 0) {
                     const nuevosItems = samples.map((item: any, idx: number) => ({
                         item: idx + 1,
-                        codigo_lem: formatLemCode(item.codigo_muestra || item.codigo_muestra_lem || ''),
+                        codigo_lem: formatLemCode(item.codigo_muestra_lem || item.codigo_muestra || ''),
                         fecha_ensayo: orden.fecha_recepcion ? formatDateForForm(orden.fecha_recepcion) : '',
                         hora_ensayo: '',
                         carga_maxima: undefined,
