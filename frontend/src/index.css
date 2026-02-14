@@ -68,4 +68,26 @@
 
 .font-display {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-}@layer utilities { input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } input[type=number] { -moz-appearance: textfield; } }
+}
+
+/* Persistent horizontal scrollbar — always visible */
+.table-scroll {
+  overflow-x: scroll;
+  scrollbar-gutter: stable;
+}
+.table-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+.table-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 5px;
+}
+.table-scroll::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 5px;
+}
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+@layer utilities { input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } input[type=number] { -moz-appearance: textfield; } }

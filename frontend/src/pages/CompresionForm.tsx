@@ -942,7 +942,7 @@ const CompressionForm: React.FC = () => {
                                 <PlusIcon className="h-4 w-4 mr-2" /> Agregar Fila
                             </button>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="table-scroll">
                             <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1400px' }}>
                                 <thead className="bg-gray-100">
                                     <tr>
