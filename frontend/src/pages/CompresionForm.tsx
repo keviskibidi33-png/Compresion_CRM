@@ -982,7 +982,6 @@ const CompressionForm: React.FC = () => {
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">F. Revisado</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Aprobado</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">F. Aprobado</th>
-                                        <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -1174,16 +1173,6 @@ const CompressionForm: React.FC = () => {
                                                 />
                                             </td>
 
-                                            {/* Delete Button */}
-                                            <td className="px-4 py-3 whitespace-nowrap text-center">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => remove(index)}
-                                                    className="text-red-600 hover:text-red-900 p-1"
-                                                >
-                                                    <TrashIcon className="h-5 w-5" />
-                                                </button>
-                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
