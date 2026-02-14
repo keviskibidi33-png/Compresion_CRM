@@ -70,31 +70,44 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* Persistent horizontal scrollbar — always visible and sticky at viewport bottom */
+/* Hide native scrollbar — we use a sticky fake one instead */
 .table-scroll {
   overflow-x: auto;
   overflow-y: visible;
-  position: relative;
-  scrollbar-color: #94a3b8 #e2e8f0;
-  scrollbar-width: thin;
-  padding-bottom: 14px;
+  scrollbar-width: none;
 }
 .table-scroll::-webkit-scrollbar {
-  height: 12px;
-  display: block !important;
+  display: none;
 }
-.table-scroll::-webkit-scrollbar-track {
-  background: #e2e8f0;
-  border-radius: 6px;
+
+/* Sticky scrollbar pinned to viewport bottom */
+.sticky-scrollbar {
   position: sticky;
   bottom: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 14px;
+  background: #e2e8f0;
+  border-top: 1px solid #cbd5e1;
+  z-index: 10;
+  scrollbar-color: #94a3b8 #e2e8f0;
+  scrollbar-width: thin;
 }
-.table-scroll::-webkit-scrollbar-thumb {
+.sticky-scrollbar > div {
+  height: 1px;
+}
+.sticky-scrollbar::-webkit-scrollbar {
+  height: 12px;
+}
+.sticky-scrollbar::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+.sticky-scrollbar::-webkit-scrollbar-thumb {
   background: #94a3b8;
   border-radius: 6px;
   border: 2px solid #e2e8f0;
 }
-.table-scroll::-webkit-scrollbar-thumb:hover {
+.sticky-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
 

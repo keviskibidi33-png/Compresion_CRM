@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useFormPersist } from '../hooks/use-form-persist';
 import { CompressionExportRequest, compressionApi } from '../services/api';
@@ -373,6 +373,29 @@ const CompressionForm: React.FC = () => {
     // Check for ID in URL for Edit Mode
     const [editId, setEditId] = useState<number | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    // Sticky scrollbar sync refs
+    const tableScrollRef = useRef<HTMLDivElement>(null);
+    const stickyScrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const table = tableScrollRef.current;
+        const sticky = stickyScrollRef.current;
+        if (!table || !sticky) return;
+        let syncing = false;
+        const syncFromTable = () => { if (!syncing) { syncing = true; sticky.scrollLeft = table.scrollLeft; syncing = false; } };
+        const syncFromSticky = () => { if (!syncing) { syncing = true; table.scrollLeft = sticky.scrollLeft; syncing = false; } };
+        table.addEventListener('scroll', syncFromTable);
+        sticky.addEventListener('scroll', syncFromSticky);
+        const updateWidth = () => {
+            const inner = sticky.firstElementChild as HTMLElement;
+            if (inner) inner.style.width = table.scrollWidth + 'px';
+        };
+        updateWidth();
+        const observer = new ResizeObserver(updateWidth);
+        observer.observe(table);
+        return () => { table.removeEventListener('scroll', syncFromTable); sticky.removeEventListener('scroll', syncFromSticky); observer.disconnect(); };
+    }, []);
 
     React.useEffect(() => {
         const searchParams = new URLSearchParams(window.location.search);
@@ -942,7 +965,7 @@ const CompressionForm: React.FC = () => {
                                 <PlusIcon className="h-4 w-4 mr-2" /> Agregar Fila
                             </button>
                         </div>
-                        <div className="table-scroll">
+                        <div className="table-scroll" ref={tableScrollRef}>
                             <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1400px' }}>
                                 <thead className="bg-gray-100">
                                     <tr>
@@ -1166,9 +1189,8 @@ const CompressionForm: React.FC = () => {
                                 </tbody>
                             </table>
                         </div>
+                        <div className="sticky-scrollbar" ref={stickyScrollRef}><div /></div>
                     </div>
-
-                    {/* Footer Section */}
                     <div className="bg-white shadow rounded-lg p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
