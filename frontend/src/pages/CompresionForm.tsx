@@ -10,6 +10,7 @@ interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> 
     items: {
         item: number;
         codigo_lem: string;
+        fecha_ensayo_programado?: string;
         fecha_ensayo?: string;
         hora_ensayo?: string;
         carga_maxima?: number;
@@ -328,6 +329,7 @@ const CompressionForm: React.FC = () => {
             items: Array.from({ length: 4 }).map((_, i) => ({
                 item: i + 1,
                 codigo_lem: '',
+                fecha_ensayo_programado: '',
                 fecha_ensayo: '',
                 hora_ensayo: '',
                 carga_maxima: undefined,
@@ -436,6 +438,7 @@ const CompressionForm: React.FC = () => {
                 items: data.items.map((it: any) => ({
                     item: it.item,
                     codigo_lem: it.codigo_lem,
+                    fecha_ensayo_programado: formatDateForForm(it.fecha_ensayo_programado),
                     fecha_ensayo: formatDateForForm(it.fecha_ensayo),
                     hora_ensayo: it.hora_ensayo || '',
                     carga_maxima: it.carga_maxima,
@@ -553,7 +556,8 @@ const CompressionForm: React.FC = () => {
                     const nuevosItems = datosBackend.muestras.map((m: any, idx: number) => ({
                         item: idx + 1,
                         codigo_lem: formatLemCode(m.codigo_lem || ''),
-                        fecha_ensayo: datosBackend.fecha_recepcion ? formatDateForForm(datosBackend.fecha_recepcion) : '',
+                        fecha_ensayo_programado: datosBackend.fecha_recepcion ? formatDateForForm(datosBackend.fecha_recepcion) : '',
+                        fecha_ensayo: '',
                         hora_ensayo: '',
                         carga_maxima: undefined,
                         tipo_fractura: '',
@@ -610,7 +614,8 @@ const CompressionForm: React.FC = () => {
                     const nuevosItems = samples.map((item: any, idx: number) => ({
                         item: idx + 1,
                         codigo_lem: formatLemCode(item.codigo_muestra_lem || item.codigo_muestra || ''),
-                        fecha_ensayo: orden.fecha_recepcion ? formatDateForForm(orden.fecha_recepcion) : '',
+                        fecha_ensayo_programado: orden.fecha_recepcion ? formatDateForForm(orden.fecha_recepcion) : '',
+                        fecha_ensayo: '',
                         hora_ensayo: '',
                         carga_maxima: undefined,
                         tipo_fractura: '',
@@ -688,6 +693,7 @@ const CompressionForm: React.FC = () => {
                     ...it,
                     item: Number(it.item),
                     // Convert DD/MM/YY to YYYY-MM-DD for backend
+                    fecha_ensayo_programado: formatDateToISO(it.fecha_ensayo_programado),
                     fecha_ensayo: formatDateToISO(it.fecha_ensayo),
                     fecha_revisado: formatDateToISO(it.fecha_revisado),
                     fecha_aprobado: formatDateToISO(it.fecha_aprobado),
@@ -948,6 +954,7 @@ const CompressionForm: React.FC = () => {
                                 onClick={() => append({
                                     item: fields.length + 1,
                                     codigo_lem: '',
+                                    fecha_ensayo_programado: '',
                                     fecha_ensayo: '',
                                     hora_ensayo: '',
                                     carga_maxima: undefined,
@@ -1015,7 +1022,7 @@ const CompressionForm: React.FC = () => {
                                             {/* Fecha Ensayo */}
                                             <td className="px-4 py-3 whitespace-nowrap">
                                                 <Controller
-                                                    name={`items.${index}.fecha_ensayo` as const}
+                                                    name={`items.${index}.fecha_ensayo_programado` as const}
                                                     control={control}
                                                     render={({ field }) => (
                                                         <DateInput
