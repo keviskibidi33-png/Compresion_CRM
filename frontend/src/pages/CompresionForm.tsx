@@ -917,7 +917,7 @@ const CompressionForm: React.FC = () => {
                     </div>
 
                     {/* Items Table */}
-                    <div className="bg-white shadow rounded-lg overflow-hidden">
+                    <div className="bg-white shadow rounded-lg">
                         <div className="px-6 py-4 flex justify-between items-center bg-gray-50 border-b border-gray-200">
                             <h3 className="text-lg leading-6 font-medium text-gray-900">Items de Ensayo</h3>
                             <button
