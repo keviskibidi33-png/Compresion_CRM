@@ -748,7 +748,7 @@ const CompressionForm: React.FC = () => {
 
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="h-screen overflow-y-auto bg-gray-50 flex flex-col">
             <header className="bg-white shadow-sm p-4">
                 <div className="max-w-full mx-auto flex justify-between items-center px-4">
                     <h1 className="text-xl font-bold text-gray-900">Módulo de Compresión de Concreto</h1>
