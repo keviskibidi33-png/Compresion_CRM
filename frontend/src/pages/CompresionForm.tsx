@@ -6,6 +6,7 @@ import { CompressionExportRequest, compressionApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { PlusIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { CheckCircle2, XCircle, FileText, Loader2, Search, Building2, Calendar, Layers } from 'lucide-react';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> {
     items: {
@@ -661,6 +662,8 @@ const CompressionForm: React.FC = () => {
     // Local Storage Persistence
     const { clearSavedData, hasSavedData } = useFormPersist("compresion-form-draft", formMethodsMemo as any);
 
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
     const handleClearForm = () => {
         clearSavedData();
         reset({
@@ -673,6 +676,7 @@ const CompressionForm: React.FC = () => {
             nota: ''
         });
         setRecepcionStatus({ estado: 'idle', mensaje: '', datos: null, formatos: undefined });
+        setIsDeleteModalOpen(false);
     };
 
     const formatDateToISO = (dateStr?: string) => {
@@ -759,7 +763,7 @@ const CompressionForm: React.FC = () => {
                                 <span className="text-xs text-amber-700 mr-2 font-medium">Borrador guardado</span>
                                 <button
                                     type="button"
-                                    onClick={handleClearForm}
+                                    onClick={() => setIsDeleteModalOpen(true)}
                                     className="p-1 text-amber-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                     title="Descartar borrador y limpiar formulario"
                                 >
@@ -1261,6 +1265,17 @@ const CompressionForm: React.FC = () => {
                     </div>
                 </form>
             </main>
+
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleClearForm}
+                title="¿Eliminar borrador?"
+                message="Esta acción borrará todos los datos temporales no guardados. No se puede deshacer."
+                confirmText="Sí, eliminar"
+                cancelText="Cancelar"
+                type="danger"
+            />
         </div>
     );
 };
