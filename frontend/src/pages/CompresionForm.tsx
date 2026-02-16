@@ -4,7 +4,7 @@ import { useFormPersist } from '../hooks/use-form-persist';
 import { useEnterTableNavigation } from '../hooks/use-enter-table-navigation';
 import { CompressionExportRequest, compressionApi } from '../services/api';
 import toast from 'react-hot-toast';
-import { PlusIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { CheckCircle2, XCircle, FileText, Loader2, Search, Building2, Calendar, Layers } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 
@@ -751,6 +751,14 @@ const CompressionForm: React.FC = () => {
 
 
 
+    const handleClose = () => {
+        if (window.self !== window.top) {
+            window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*');
+        } else {
+            window.history.back();
+        }
+    };
+
     return (
         <div className="h-screen overflow-y-auto bg-gray-50 flex flex-col">
             <header className="bg-white shadow-sm p-4">
@@ -771,7 +779,13 @@ const CompressionForm: React.FC = () => {
                                 </button>
                             </div>
                         )}
-
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"
+                        >
+                            <XMarkIcon className="h-4 w-4" /> <span>Cancelar</span>
+                        </button>
                     </div>
                 </div>
             </header>
