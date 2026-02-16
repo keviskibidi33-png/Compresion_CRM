@@ -998,7 +998,7 @@ const CompressionForm: React.FC = () => {
                                     {fields.map((field, index) => (
                                         <tr key={field.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                             {/* Item Number */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <input
                                                     type="number"
                                                     {...register(`items.${index}.item` as const)}
@@ -1007,7 +1007,7 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Código LEM */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <Controller
                                                     name={`items.${index}.codigo_lem` as const}
                                                     control={control}
@@ -1023,7 +1023,7 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Fecha Ensayo Programado */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <Controller
                                                     name={`items.${index}.fecha_ensayo_programado` as const}
                                                     control={control}
@@ -1039,7 +1039,7 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Carga Máxima */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <input
                                                     type="number"
                                                     step="0.01"
@@ -1049,7 +1049,7 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Tipo Fractura */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <select
                                                     {...register(`items.${index}.tipo_fractura` as const)}
                                                     className="block w-20 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
@@ -1062,7 +1062,7 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Defectos - Dropdown with separate custom input */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <div className="flex gap-2 items-center">
                                                     <select
                                                         {...register(`items.${index}.defectos` as const)}
@@ -1086,7 +1086,7 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Realizado */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <select
                                                     {...register(`items.${index}.realizado` as const)}
                                                     className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
@@ -1099,7 +1099,7 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Fecha Ensayo (real) */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <Controller
                                                     name={`items.${index}.fecha_ensayo` as const}
                                                     control={control}
@@ -1115,18 +1115,37 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Hora Ensayo */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
-                                                <input
-                                                    type="text"
-                                                    {...register(`items.${index}.hora_ensayo` as const)}
-                                                    placeholder="0000"
-                                                    className="block w-16 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
-                                                    inputMode="numeric"
+                                            <td className="px-4 py-3">
+                                                <Controller
+                                                    name={`items.${index}.hora_ensayo` as const}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <input
+                                                            type="text"
+                                                            value={field.value || ''}
+                                                            onChange={(e) => {
+                                                                let v = e.target.value.replace(/[^\d:]/g, '');
+                                                                const digits = v.replace(/:/g, '');
+                                                                if (digits.length <= 6) {
+                                                                    let formatted = '';
+                                                                    for (let i = 0; i < digits.length; i++) {
+                                                                        if (i === 2 || i === 4) formatted += ':';
+                                                                        formatted += digits[i];
+                                                                    }
+                                                                    field.onChange(formatted);
+                                                                }
+                                                            }}
+                                                            placeholder="00:00:00"
+                                                            className="block w-20 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border text-center"
+                                                            inputMode="numeric"
+                                                            maxLength={8}
+                                                        />
+                                                    )}
                                                 />
                                             </td>
 
                                             {/* Revisado */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <select
                                                     {...register(`items.${index}.revisado` as const)}
                                                     className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
@@ -1139,7 +1158,7 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Fecha Revisado */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <Controller
                                                     name={`items.${index}.fecha_revisado` as const}
                                                     control={control}
@@ -1155,7 +1174,7 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Aprobado */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <select
                                                     {...register(`items.${index}.aprobado` as const)}
                                                     className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
@@ -1168,7 +1187,7 @@ const CompressionForm: React.FC = () => {
                                             </td>
 
                                             {/* Fecha Aprobado */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
+                                            <td className="px-4 py-3">
                                                 <Controller
                                                     name={`items.${index}.fecha_aprobado` as const}
                                                     control={control}
