@@ -982,12 +982,12 @@ const CompressionForm: React.FC = () => {
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">Item</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Código LEM</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">Fecha Ensayo Programado</th>
-                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Hora</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Carga Máx (KN)</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Tipo Fractura</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-40">Defectos</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Realizado</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">Fecha Ensayo</th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Hora Ensayo</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Revisado</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">F. Revisado</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Aprobado</th>
@@ -1022,7 +1022,7 @@ const CompressionForm: React.FC = () => {
                                                 />
                                             </td>
 
-                                            {/* Fecha Ensayo */}
+                                            {/* Fecha Ensayo Programado */}
                                             <td className="px-4 py-3 whitespace-nowrap">
                                                 <Controller
                                                     name={`items.${index}.fecha_ensayo_programado` as const}
@@ -1035,17 +1035,6 @@ const CompressionForm: React.FC = () => {
                                                             className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                         />
                                                     )}
-                                                />
-                                            </td>
-
-                                            {/* Hora Ensayo */}
-                                            <td className="px-4 py-3 whitespace-nowrap">
-                                                <input
-                                                    type="text"
-                                                    {...register(`items.${index}.hora_ensayo` as const)}
-                                                    placeholder="0000"
-                                                    className="block w-16 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
-                                                    inputMode="numeric"
                                                 />
                                             </td>
 
@@ -1122,6 +1111,17 @@ const CompressionForm: React.FC = () => {
                                                             className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                         />
                                                     )}
+                                                />
+                                            </td>
+
+                                            {/* Hora Ensayo */}
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <input
+                                                    type="text"
+                                                    {...register(`items.${index}.hora_ensayo` as const)}
+                                                    placeholder="0000"
+                                                    className="block w-16 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                    inputMode="numeric"
                                                 />
                                             </td>
 
