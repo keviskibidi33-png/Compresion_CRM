@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useFormPersist } from '../hooks/use-form-persist';
+import { useEnterTableNavigation } from '../hooks/use-enter-table-navigation';
 import { CompressionExportRequest, compressionApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { PlusIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
@@ -324,6 +325,7 @@ const OTInput: React.FC<{
 };
 
 const CompressionForm: React.FC = () => {
+    const handleItemsTableKeyDown = useEnterTableNavigation();
     const { register, control, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm<CompressionFormInputs>({
         defaultValues: {
             items: Array.from({ length: 4 }).map((_, i) => ({
@@ -345,6 +347,7 @@ const CompressionForm: React.FC = () => {
             recepcion_numero: '',
             ot_numero: '',
             recepcion_id: undefined, // Initialize
+            codigo_equipo: '-',
         }
     });
 
@@ -432,7 +435,7 @@ const CompressionForm: React.FC = () => {
                 recepcion_numero: data.numero_recepcion || '',
                 ot_numero: data.numero_ot || '',
                 recepcion_id: data.recepcion_id, // Load existing ID
-                codigo_equipo: data.codigo_equipo || '',
+                codigo_equipo: data.codigo_equipo || '-',
                 otros: data.otros || '',
                 nota: data.nota || '',
                 items: data.items.map((it: any) => ({
@@ -665,7 +668,7 @@ const CompressionForm: React.FC = () => {
             ot_numero: '',
             recepcion_id: undefined,
             items: [{ item: 1, codigo_lem: '' }],
-            codigo_equipo: '',
+            codigo_equipo: '-',
             otros: '',
             nota: ''
         });
@@ -973,7 +976,7 @@ const CompressionForm: React.FC = () => {
                             </button>
                         </div>
                         <div className="table-scroll" ref={tableScrollRef}>
-                            <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1400px' }}>
+                            <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1400px' }} onKeyDown={handleItemsTableKeyDown}>
                                 <thead className="bg-gray-100">
                                     <tr>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">Item</th>
@@ -1191,11 +1194,14 @@ const CompressionForm: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Código Equipo Utilizado</label>
-                                <input
-                                    type="text"
+                                <select
                                     {...register('codigo_equipo')}
                                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border"
-                                />
+                                >
+                                    <option value="-">-</option>
+                                    <option value="Prensa">Prensa</option>
+                                    <option value="EQP-0023">EQP-0023</option>
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Otros (35 I-J)</label>
