@@ -5,7 +5,7 @@ import { useEnterTableNavigation } from '../hooks/use-enter-table-navigation';
 import { CompressionExportRequest, compressionApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { PlusIcon, TrashIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { CheckCircle2, XCircle, FileText, Loader2, Search, Building2, Calendar, Layers } from 'lucide-react';
+import { CheckCircle2, XCircle, FileText, Loader2, Search, Building2, Calendar, Layers, ChevronLeft, Trash2 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 
 interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> {
@@ -727,7 +727,7 @@ const CompressionForm: React.FC = () => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Ensayo_Compresion_${data.recepcion_numero || 'temp'}.xlsx`;
+            a.download = `Formato Compresión N-${data.recepcion_numero || 'temp'}.xlsx`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -763,29 +763,29 @@ const CompressionForm: React.FC = () => {
         <div className="h-screen overflow-y-auto bg-gray-50 flex flex-col">
             <header className="bg-white shadow-sm p-4">
                 <div className="max-w-full mx-auto flex justify-between items-center px-4">
-                    <h1 className="text-xl font-bold text-gray-900">Módulo de Compresión de Concreto</h1>
-                    <div className="flex items-center space-x-2">
-                        {/* Saving Indicator / Clear Draft */}
-                        {hasSavedData && (
-                            <div className="flex items-center mr-4 animate-in fade-in duration-300 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                                <span className="text-xs text-amber-700 mr-2 font-medium">Borrador guardado</span>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsDeleteModalOpen(true)}
-                                    className="p-1 text-amber-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                                    title="Descartar borrador y limpiar formulario"
-                                >
-                                    <TrashIcon className="h-4 w-4" />
-                                </button>
-                            </div>
-                        )}
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"
-                        >
-                            <XMarkIcon className="h-4 w-4" /> <span>Cancelar</span>
+                    <div className="flex items-center gap-4">
+                        <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+                            <ChevronLeft size={24} />
                         </button>
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+                                {editId ? 'Editar Compresión' : 'Módulo de Compresión de Concreto'}
+                            </h1>
+                            {editId && (
+                                <p className="text-sm text-gray-500 mt-0.5">ID: <span className="font-mono text-gray-700">#{editId}</span></p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        {hasSavedData && !editId && (
+                            <button
+                                type="button"
+                                onClick={() => setIsDeleteModalOpen(true)}
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 text-sm font-medium rounded-lg hover:bg-rose-100 transition-colors border border-rose-200"
+                            >
+                                <Trash2 size={16} /> <span>Eliminar Borrador</span>
+                            </button>
+                        )}
                     </div>
                 </div>
             </header>
@@ -795,11 +795,6 @@ const CompressionForm: React.FC = () => {
 
                     {/* Header Section */}
                     <div className="bg-white shadow rounded-lg p-6 overflow-visible relative">
-                        {editId && (
-                            <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg text-xs font-bold uppercase shadow-sm z-10">
-                                Modo Edición - ID: {editId}
-                            </div>
-                        )}
                         <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-8 bg-gray-50/50 p-4 rounded-xl border border-gray-100 overflow-visible">
                             {/* N° Recepción */}
                             <div className="flex-[2] min-w-0 overflow-visible">
