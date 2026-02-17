@@ -760,20 +760,26 @@ const CompressionForm: React.FC = () => {
     };
 
     return (
-        <div className="h-screen overflow-y-auto bg-gray-50 flex flex-col">
-            <header className="bg-white shadow-sm p-4">
-                <div className="max-w-full mx-auto flex justify-between items-center px-4">
+        <div className="h-screen overflow-y-auto bg-[#F8FAFC] flex flex-col font-sans antialiased">
+            <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm px-6 py-2">
+                <div className="max-w-full mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-4">
                         <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 transition-colors">
                             <ChevronLeft size={24} />
                         </button>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900 tracking-tight">
-                                {editId ? 'Editar Compresión' : 'Módulo de Compresión de Concreto'}
-                            </h1>
-                            {editId && (
-                                <p className="text-sm text-gray-500 mt-0.5">ID: <span className="font-mono text-gray-700">#{editId}</span></p>
-                            )}
+                        <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-xl bg-[#0070F3] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 transform -rotate-3 hover:rotate-0 transition-transform duration-500">
+                                <Layers className="h-5 w-5" strokeWidth={3} />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">
+                                    {editId ? 'Editar Compresión' : 'Módulo de Compresión'}
+                                </h1>
+                                <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.2em] mt-0.5 flex items-center gap-2">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                                    {editId ? `ID: #${editId}` : 'Registro de Ensayos Geofal'}
+                                </p>
+                            </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -781,7 +787,7 @@ const CompressionForm: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={() => setIsDeleteModalOpen(true)}
-                                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 text-sm font-medium rounded-lg hover:bg-rose-100 transition-colors border border-rose-200"
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 text-slate-400 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-rose-50 hover:text-rose-500 transition-all border border-slate-100"
                             >
                                 <Trash2 size={16} /> <span>Eliminar Borrador</span>
                             </button>
@@ -1260,14 +1266,17 @@ const CompressionForm: React.FC = () => {
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                            className="flex items-center gap-2 px-8 py-2.5 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all shadow-lg shadow-slate-900/10 disabled:opacity-50"
                         >
                             {isSubmitting ? (
-                                <>Generando...</>
+                                <>
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    <span>Generando...</span>
+                                </>
                             ) : (
                                 <>
-                                    <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-                                    Generar Excel
+                                    <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                                    <span>Generar Excel</span>
                                 </>
                             )}
                         </button>
