@@ -419,10 +419,24 @@ const CompressionForm: React.FC = () => {
     // Helper to format ISO to DD/MM/YY
     const formatDateForForm = (isoDate?: string | null) => {
         if (!isoDate) return '';
-        if (typeof isoDate === 'string' && isoDate.includes('-')) {
+        if (typeof isoDate !== 'string') return '';
+
+        // Case 1: ISO yyyy-mm-dd or yyyy-mm-ddTHH
+        if (isoDate.includes('-')) {
             const [y, m, d] = isoDate.split('T')[0].split('-');
             return `${d}/${m}/${y.slice(2)}`;
         }
+
+        // Case 2: DD/MM/YYYY or DD/MM/YY
+        if (isoDate.includes('/')) {
+            const parts = isoDate.split('/');
+            if (parts.length === 3) {
+                const [d, m, y] = parts;
+                const yy = y.length === 4 ? y.slice(2) : y;
+                return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${yy}`;
+            }
+        }
+
         return '';
     };
 
