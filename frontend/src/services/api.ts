@@ -32,6 +32,7 @@ api.interceptors.response.use(
 export interface CompressionItem {
     item: number;
     codigo_lem: string;
+    fecha_ensayo_programado?: string; // YYYY-MM-DD
     fecha_ensayo?: string; // YYYY-MM-DD
     hora_ensayo?: string;
     carga_maxima?: number;
@@ -97,6 +98,7 @@ export const compressionApi = {
             items: data.items.map((it: any) => ({
                 item: it.item,
                 codigo_lem: it.codigo_lem,
+                fecha_ensayo_programado: it.fecha_ensayo_programado,
                 fecha_ensayo: it.fecha_ensayo,
                 hora_ensayo: it.hora_ensayo,
                 carga_maxima: it.carga_maxima,
