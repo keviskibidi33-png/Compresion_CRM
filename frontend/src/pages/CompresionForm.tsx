@@ -440,6 +440,14 @@ const CompressionForm: React.FC = () => {
         return '';
     };
 
+    const pickFechaProgramada = (item: any, fallback?: string) => {
+        const raw = item?.fecha_rotura
+            || item?.fechaRotura
+            || item?.fecha_ensayo_programado
+            || item?.fechaEnsayoProgramado;
+        return raw ? formatDateForForm(raw) : fallback ? formatDateForForm(fallback) : '';
+    };
+
     const loadEnsayo = async (id: number) => {
         try {
             const loadingToast = toast.loading('Cargando datos del ensayo...');
@@ -574,7 +582,7 @@ const CompressionForm: React.FC = () => {
                     const nuevosItems = datosBackend.muestras.map((m: any, idx: number) => ({
                         item: idx + 1,
                         codigo_lem: formatLemCode(m.codigo_lem || ''),
-                        fecha_ensayo_programado: m.fecha_rotura ? formatDateForForm(m.fecha_rotura) : datosBackend.fecha_recepcion ? formatDateForForm(datosBackend.fecha_recepcion) : '',
+                        fecha_ensayo_programado: pickFechaProgramada(m, datosBackend.fecha_recepcion),
                         fecha_ensayo: '',
                         hora_ensayo: '',
                         carga_maxima: undefined,
@@ -632,7 +640,7 @@ const CompressionForm: React.FC = () => {
                     const nuevosItems = samples.map((item: any, idx: number) => ({
                         item: idx + 1,
                         codigo_lem: formatLemCode(item.codigo_muestra_lem || item.codigo_muestra || ''),
-                        fecha_ensayo_programado: item.fecha_rotura ? formatDateForForm(item.fecha_rotura) : orden.fecha_recepcion ? formatDateForForm(orden.fecha_recepcion) : '',
+                        fecha_ensayo_programado: pickFechaProgramada(item, orden.fecha_recepcion),
                         fecha_ensayo: '',
                         hora_ensayo: '',
                         carga_maxima: undefined,
