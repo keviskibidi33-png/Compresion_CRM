@@ -66,6 +66,32 @@ const formatLemCode = (value: string): string => {
     return clean;
 };
 
+const hasCompressionItemData = (item: CompressionFormInputs['items'][number] | undefined): boolean => {
+    if (!item) return false;
+
+    const textFields = [
+        item.codigo_lem,
+        item.fecha_ensayo_programado,
+        item.fecha_ensayo,
+        item.hora_ensayo,
+        item.tipo_fractura,
+        item.defectos,
+        item.defectos_custom,
+        item.realizado,
+        item.revisado,
+        item.fecha_revisado,
+        item.aprobado,
+        item.fecha_aprobado,
+    ];
+
+    if (textFields.some((value) => typeof value === 'string' && value.trim() !== '')) {
+        return true;
+    }
+
+    const numericFields = [item.carga_maxima, item.diametro, item.area];
+    return numericFields.some((value) => value !== undefined && value !== null && String(value).trim() !== '');
+};
+
 // Custom date input component with XX/XX/26 format and autocomplete
 const DateInput: React.FC<{
     value: string;
@@ -327,7 +353,7 @@ const OTInput: React.FC<{
 
 const CompressionForm: React.FC = () => {
     const handleItemsTableKeyDown = useEnterTableNavigation();
-    const { register, control, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm<CompressionFormInputs>({
+    const { register, control, handleSubmit, setValue, watch, reset, getValues, formState: { errors, isSubmitting } } = useForm<CompressionFormInputs>({
         defaultValues: {
             items: Array.from({ length: 4 }).map((_, i) => ({
                 item: i + 1,
@@ -576,7 +602,8 @@ const CompressionForm: React.FC = () => {
                 // 2. Auto-fill Items/Samples
                 // Only if we don't have items or the first item is empty/default
                 const currentItems = watch('items');
-                const isGridEmpty = currentItems.length <= 1 && !currentItems[0]?.codigo_lem;
+                const hasMeaningfulItems = currentItems.some((item) => hasCompressionItemData(item));
+                const isGridEmpty = !hasMeaningfulItems;
 
                 if (isGridEmpty && datosBackend.muestras && datosBackend.muestras.length > 0) {
                     const nuevosItems = datosBackend.muestras.map((m: any, idx: number) => ({
@@ -685,6 +712,7 @@ const CompressionForm: React.FC = () => {
     const { clearSavedData, hasSavedData } = useFormPersist("compresion-form-draft", formMethodsMemo as any);
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDownloadingExcel, setIsDownloadingExcel] = useState(false);
 
     const handleClearForm = () => {
         clearSavedData();
@@ -711,27 +739,40 @@ const CompressionForm: React.FC = () => {
         return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     };
 
+    const buildApiData = (data: CompressionFormInputs) => ({
+        ...data,
+        items: data.items.map(it => ({
+            ...it,
+            item: Number(it.item),
+            fecha_ensayo_programado: formatDateToISO(it.fecha_ensayo_programado),
+            fecha_ensayo: formatDateToISO(it.fecha_ensayo),
+            fecha_revisado: formatDateToISO(it.fecha_revisado),
+            fecha_aprobado: formatDateToISO(it.fecha_aprobado),
+            carga_maxima: it.carga_maxima ? Number(it.carga_maxima) : undefined,
+            defectos: it.defectos === 'Otro' ? it.defectos_custom : it.defectos,
+            diametro: it.diametro ? Number(it.diametro) : undefined,
+            area: it.area ? Number(it.area) : undefined,
+        }))
+    });
+
+    const triggerExcelDownload = async (data: CompressionFormInputs) => {
+        const apiData = buildApiData(data);
+        const blob = await compressionApi.exportarExcel(apiData as any);
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Formato Compresión N-${data.recepcion_numero || 'temp'}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    };
+
     const onSubmit = async (data: CompressionFormInputs) => {
         try {
-            const loadingToast = toast.loading('Guardando y generando Excel...');
-
-            // Prepare data with correct formats
-            const apiData = {
-                ...data,
-                items: data.items.map(it => ({
-                    ...it,
-                    item: Number(it.item),
-                    // Convert DD/MM/YY to YYYY-MM-DD for backend
-                    fecha_ensayo_programado: formatDateToISO(it.fecha_ensayo_programado),
-                    fecha_ensayo: formatDateToISO(it.fecha_ensayo),
-                    fecha_revisado: formatDateToISO(it.fecha_revisado),
-                    fecha_aprobado: formatDateToISO(it.fecha_aprobado),
-                    carga_maxima: it.carga_maxima ? Number(it.carga_maxima) : undefined,
-                    defectos: it.defectos === 'Otro' ? it.defectos_custom : it.defectos,
-                    diametro: it.diametro ? Number(it.diametro) : undefined,
-                    area: it.area ? Number(it.area) : undefined,
-                }))
-            };
+            const loadingToast = toast.loading('Guardando ensayo...');
+            const apiData = buildApiData(data);
 
             // 1. Save to Database first
             try {
@@ -739,26 +780,42 @@ const CompressionForm: React.FC = () => {
                 await compressionApi.guardarEnsayo(apiData, editId || undefined);
             } catch (saveError) {
                 console.error('Error saving to DB:', saveError);
-                toast.error('Error al guardar en base de datos, pero intentando generar Excel...');
+                toast.error('Error al guardar en base de datos');
+                return;
             }
 
-            // 2. Export to Excel
-            const blob = await compressionApi.exportarExcel(apiData as any);
-
-            // Create download link
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Formato Compresión N-${data.recepcion_numero || 'temp'}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-
-            toast.success('Ensayo guardado y Excel generado exitosamente!', { id: loadingToast });
-            if (!editId) {
-                handleClearForm(); // Only clear if creating new, keep form if editing
-            }
+            toast.success('Ensayo guardado correctamente. La descarga es manual.', { id: loadingToast });
+            clearSavedData();
+            reset({
+                recepcion_numero: '',
+                ot_numero: '',
+                recepcion_id: undefined,
+                items: Array.from({ length: 4 }).map((_, i) => ({
+                    item: i + 1,
+                    codigo_lem: '',
+                    fecha_ensayo_programado: '',
+                    fecha_ensayo: '',
+                    hora_ensayo: '',
+                    carga_maxima: undefined,
+                    tipo_fractura: '',
+                    defectos: '',
+                    defectos_custom: '',
+                    realizado: '',
+                    revisado: '',
+                    fecha_revisado: '',
+                    aprobado: '',
+                    fecha_aprobado: '',
+                    diametro: undefined,
+                    area: undefined,
+                })),
+                codigo_equipo: '-',
+                otros: '',
+                nota: '',
+            });
+            setRecepcionStatus({ estado: 'idle' });
+            setSuggestions([]);
+            setShowSuggestions(false);
+            setTimeout(() => handleClose(), 300);
         } catch (error: any) {
             console.error(error);
             // Show more detailed error for 422 or custom ValueError (detail)
@@ -768,6 +825,23 @@ const CompressionForm: React.FC = () => {
                 msg = typeof detail === 'string' ? detail : JSON.stringify(detail);
             }
             toast.error(msg);
+        }
+    };
+
+    const handleManualDownload = async () => {
+        const data = getValues();
+        setIsDownloadingExcel(true);
+        const loadingToast = toast.loading('Generando Excel...');
+        try {
+            await triggerExcelDownload(data);
+            toast.success('Excel descargado correctamente.', { id: loadingToast });
+        } catch (error: any) {
+            console.error(error);
+            const detail = error.response?.data?.detail;
+            const msg = detail ? (typeof detail === 'string' ? detail : JSON.stringify(detail)) : 'Error al descargar Excel';
+            toast.error(msg, { id: loadingToast });
+        } finally {
+            setIsDownloadingExcel(false);
         }
     };
 
@@ -975,7 +1049,7 @@ const CompressionForm: React.FC = () => {
                         </div>
 
                         {/* Import Button Section - Full width under the flex row */}
-                        {recepcionStatus.estado === 'disponible' && watch('recepcion_id') && watchedItems.length <= 1 && !watchedItems[0]?.codigo_lem && (
+                        {recepcionStatus.estado === 'disponible' && watch('recepcion_id') && !watchedItems.some((item) => hasCompressionItemData(item)) && (
                             <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <button
                                     type="button"
@@ -1284,6 +1358,24 @@ const CompressionForm: React.FC = () => {
 
                     {/* Submit Button */}
                     <div className="flex justify-end gap-4">
+                        <button
+                            type="button"
+                            onClick={handleManualDownload}
+                            disabled={isSubmitting || isDownloadingExcel}
+                            className="flex items-center gap-2 px-8 py-2.5 bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-100 transition-all border border-emerald-200 disabled:opacity-50"
+                        >
+                            {isDownloadingExcel ? (
+                                <>
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    <span>Descargando...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                                    <span>Descargar Excel</span>
+                                </>
+                            )}
+                        </button>
 
                         <button
                             type="submit"
@@ -1293,12 +1385,12 @@ const CompressionForm: React.FC = () => {
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    <span>Generando...</span>
+                                    <span>Guardando...</span>
                                 </>
                             ) : (
                                 <>
-                                    <ArrowDownTrayIcon className="h-3.5 w-3.5" />
-                                    <span>Generar Excel</span>
+                                    <FileText className="h-3.5 w-3.5" />
+                                    <span>Guardar</span>
                                 </>
                             )}
                         </button>

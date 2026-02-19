@@ -1,5 +1,46 @@
 import { useEffect, useCallback, useState } from 'react';
-import { UseFormReturn, Path, FieldValues, DefaultValues } from 'react-hook-form';
+import { UseFormReturn, FieldValues, DefaultValues } from 'react-hook-form';
+
+const hasNonEmptyString = (value: unknown): boolean =>
+    typeof value === 'string' && value.trim() !== '';
+
+const hasCompressionItemData = (item: any): boolean => {
+    if (!item || typeof item !== 'object') return false;
+
+    const stringFields = [
+        'codigo_lem',
+        'fecha_ensayo_programado',
+        'fecha_ensayo',
+        'hora_ensayo',
+        'tipo_fractura',
+        'defectos',
+        'defectos_custom',
+        'realizado',
+        'revisado',
+        'fecha_revisado',
+        'aprobado',
+        'fecha_aprobado',
+    ];
+
+    if (stringFields.some((field) => hasNonEmptyString(item[field]))) return true;
+
+    const numericFields = ['carga_maxima', 'diametro', 'area'];
+    return numericFields.some((field) => item[field] !== undefined && item[field] !== null && String(item[field]).trim() !== '');
+};
+
+const sanitizeCompressionItems = (items: any[]): any[] => {
+    const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+    const meaningful = safeItems.filter(hasCompressionItemData);
+
+    if (meaningful.length === 0) {
+        return [{ item: 1, codigo_lem: '' }];
+    }
+
+    return meaningful.map((item, index) => ({
+        ...item,
+        item: index + 1,
+    }));
+};
 
 /**
  * Hook to persist form data to localStorage
@@ -12,7 +53,7 @@ export function useFormPersist<T extends FieldValues>(
     formMethods: UseFormReturn<T>,
     enabled: boolean = true
 ) {
-    const { watch, setValue, reset } = formMethods;
+    const { watch, reset } = formMethods;
     const values = watch();
     const [hasSavedData, setHasSavedData] = useState(false);
 
@@ -24,6 +65,9 @@ export function useFormPersist<T extends FieldValues>(
         if (savedData) {
             try {
                 const parsed = JSON.parse(savedData);
+                if (Array.isArray(parsed?.items)) {
+                    parsed.items = sanitizeCompressionItems(parsed.items);
+                }
                 setHasSavedData(true);
                 // Reset form with saved data to populate fields
                 reset(parsed as DefaultValues<T>);
@@ -39,7 +83,11 @@ export function useFormPersist<T extends FieldValues>(
         if (!enabled) return;
 
         const timeoutId = setTimeout(() => {
-            localStorage.setItem(formKey, JSON.stringify(values));
+            const toSave: any = { ...values };
+            if (Array.isArray(toSave.items)) {
+                toSave.items = sanitizeCompressionItems(toSave.items);
+            }
+            localStorage.setItem(formKey, JSON.stringify(toSave));
             setHasSavedData(true);
         }, 1000);
 
