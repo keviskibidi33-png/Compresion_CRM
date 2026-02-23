@@ -79,6 +79,37 @@ export interface CompressionExportRequest {
     recepcion_id?: number; // Added to link with reception
 }
 
+const isPlaceholderCodigoLem = (value: unknown): boolean => {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (normalized === '' || normalized === '-') return true;
+    return /^X{2,}(?:-CO(?:-\d{2})?)?$/.test(normalized);
+};
+
+const hasCompressionItemData = (item: any): boolean => {
+    if (!item || typeof item !== 'object') return false;
+
+    const hasCodigoUtil = !isPlaceholderCodigoLem(item.codigo_lem);
+    const textFields = [
+        item.fecha_ensayo_programado,
+        item.fecha_ensayo,
+        item.hora_ensayo,
+        item.tipo_fractura,
+        item.defectos,
+        item.realizado,
+        item.revisado,
+        item.fecha_revisado,
+        item.aprobado,
+        item.fecha_aprobado,
+    ];
+
+    if (hasCodigoUtil || textFields.some((value) => typeof value === 'string' && value.trim() !== '')) {
+        return true;
+    }
+
+    const numericFields = [item.carga_maxima, item.diametro, item.area];
+    return numericFields.some((value) => value !== undefined && value !== null && String(value).trim() !== '');
+};
+
 export const compressionApi = {
     exportarExcel: async (data: CompressionExportRequest) => {
         const response = await api.post('/api/compresion/export', data, {
@@ -87,6 +118,18 @@ export const compressionApi = {
         return response.data;
     },
     guardarEnsayo: async (data: any, id?: number) => {
+        const sanitizedItems = (Array.isArray(data.items) ? data.items : [])
+            .filter((item) => hasCompressionItemData(item))
+            .map((item: any, index: number) => ({
+                ...item,
+                item: index + 1,
+                codigo_lem: String(item.codigo_lem || '').trim().toUpperCase(),
+            }));
+
+        if (sanitizedItems.length === 0) {
+            throw new Error('Debe completar al menos una fila válida antes de guardar.');
+        }
+
         // Prepare data for the backend
         const backendData = {
             numero_ot: data.ot_numero,
@@ -95,7 +138,7 @@ export const compressionApi = {
             codigo_equipo: data.codigo_equipo,
             otros: data.otros,
             nota: data.nota,
-            items: data.items.map((it: any) => ({
+            items: sanitizedItems.map((it: any) => ({
                 item: it.item,
                 codigo_lem: it.codigo_lem,
                 fecha_ensayo_programado: it.fecha_ensayo_programado,

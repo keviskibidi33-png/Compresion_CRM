@@ -7,8 +7,14 @@ const hasNonEmptyString = (value: unknown): boolean =>
 const hasCompressionItemData = (item: any): boolean => {
     if (!item || typeof item !== 'object') return false;
 
+    const codigoLem = String(item.codigo_lem || '').trim().toUpperCase();
+    const codigoEsPlaceholder =
+        codigoLem === '' ||
+        codigoLem === '-' ||
+        /^X{2,}(?:-CO(?:-\d{2})?)?$/.test(codigoLem);
+    const tieneCodigoUtil = !codigoEsPlaceholder;
+
     const stringFields = [
-        'codigo_lem',
         'fecha_ensayo_programado',
         'fecha_ensayo',
         'hora_ensayo',
@@ -22,7 +28,7 @@ const hasCompressionItemData = (item: any): boolean => {
         'fecha_aprobado',
     ];
 
-    if (stringFields.some((field) => hasNonEmptyString(item[field]))) return true;
+    if (tieneCodigoUtil || stringFields.some((field) => hasNonEmptyString(item[field]))) return true;
 
     const numericFields = ['carga_maxima', 'diametro', 'area'];
     return numericFields.some((field) => item[field] !== undefined && item[field] !== null && String(item[field]).trim() !== '');

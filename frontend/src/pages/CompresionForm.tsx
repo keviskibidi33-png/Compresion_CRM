@@ -69,8 +69,15 @@ const formatLemCode = (value: string): string => {
 const hasCompressionItemData = (item: CompressionFormInputs['items'][number] | undefined): boolean => {
     if (!item) return false;
 
+    const codigoLem = (item.codigo_lem || '').trim().toUpperCase();
+    const codigoEsPlaceholder =
+        codigoLem === '' ||
+        codigoLem === '-' ||
+        /^X{2,}(?:-CO(?:-\d{2})?)?$/.test(codigoLem);
+
+    const tieneCodigoUtil = !codigoEsPlaceholder;
+
     const textFields = [
-        item.codigo_lem,
         item.fecha_ensayo_programado,
         item.fecha_ensayo,
         item.hora_ensayo,
@@ -84,12 +91,26 @@ const hasCompressionItemData = (item: CompressionFormInputs['items'][number] | u
         item.fecha_aprobado,
     ];
 
-    if (textFields.some((value) => typeof value === 'string' && value.trim() !== '')) {
+    if (tieneCodigoUtil || textFields.some((value) => typeof value === 'string' && value.trim() !== '')) {
         return true;
     }
 
     const numericFields = [item.carga_maxima, item.diametro, item.area];
     return numericFields.some((value) => value !== undefined && value !== null && String(value).trim() !== '');
+};
+
+const sanitizeCompressionItemsForSave = (
+    items: CompressionFormInputs['items'] | undefined
+): CompressionFormInputs['items'] => {
+    const source = Array.isArray(items) ? items : [];
+
+    const filtered = source.filter((item) => hasCompressionItemData(item));
+
+    return filtered.map((item, index) => ({
+        ...item,
+        item: index + 1,
+        codigo_lem: (item.codigo_lem || '').trim().toUpperCase(),
+    }));
 };
 
 // Custom date input component with XX/XX/26 format and autocomplete
@@ -739,21 +760,29 @@ const CompressionForm: React.FC = () => {
         return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     };
 
-    const buildApiData = (data: CompressionFormInputs) => ({
-        ...data,
-        items: data.items.map(it => ({
-            ...it,
-            item: Number(it.item),
-            fecha_ensayo_programado: formatDateToISO(it.fecha_ensayo_programado),
-            fecha_ensayo: formatDateToISO(it.fecha_ensayo),
-            fecha_revisado: formatDateToISO(it.fecha_revisado),
-            fecha_aprobado: formatDateToISO(it.fecha_aprobado),
-            carga_maxima: it.carga_maxima ? Number(it.carga_maxima) : undefined,
-            defectos: it.defectos === 'Otro' ? it.defectos_custom : it.defectos,
-            diametro: it.diametro ? Number(it.diametro) : undefined,
-            area: it.area ? Number(it.area) : undefined,
-        }))
-    });
+    const buildApiData = (data: CompressionFormInputs) => {
+        const sanitizedItems = sanitizeCompressionItemsForSave(data.items);
+
+        if (sanitizedItems.length === 0) {
+            throw new Error('Debe completar al menos una fila válida antes de guardar.');
+        }
+
+        return {
+            ...data,
+            items: sanitizedItems.map(it => ({
+                ...it,
+                item: Number(it.item),
+                fecha_ensayo_programado: formatDateToISO(it.fecha_ensayo_programado),
+                fecha_ensayo: formatDateToISO(it.fecha_ensayo),
+                fecha_revisado: formatDateToISO(it.fecha_revisado),
+                fecha_aprobado: formatDateToISO(it.fecha_aprobado),
+                carga_maxima: it.carga_maxima ? Number(it.carga_maxima) : undefined,
+                defectos: it.defectos === 'Otro' ? it.defectos_custom : it.defectos,
+                diametro: it.diametro ? Number(it.diametro) : undefined,
+                area: it.area ? Number(it.area) : undefined,
+            }))
+        };
+    };
 
     const triggerExcelDownload = async (data: CompressionFormInputs) => {
         const apiData = buildApiData(data);
@@ -780,7 +809,12 @@ const CompressionForm: React.FC = () => {
                 await compressionApi.guardarEnsayo(apiData, editId || undefined);
             } catch (saveError) {
                 console.error('Error saving to DB:', saveError);
-                toast.error('Error al guardar en base de datos');
+                toast.dismiss(loadingToast);
+                const message =
+                    saveError instanceof Error && saveError.message
+                        ? saveError.message
+                        : 'Error al guardar en base de datos';
+                toast.error(message);
                 return;
             }
 
