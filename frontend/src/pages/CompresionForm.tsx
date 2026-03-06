@@ -31,7 +31,7 @@ interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> 
 }
 
 // Personnel options
-const REALIZADO_OPTIONS = ['Deyvi Infanzon', 'Ivan Chancon'];
+const REALIZADO_OPTIONS = ['Andres Sanchez', 'Deyvi Infanzon', 'Ivan Chancon'];
 const REVISADO_OPTIONS = ['Fabian la Rosa'];
 const APROBADO_OPTIONS = ['Irma Coaquira'];
 const DEFECTOS_OPTIONS = ['Ninguno', 'A', 'B', 'C', 'D', 'E'];
