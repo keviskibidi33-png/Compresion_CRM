@@ -120,11 +120,15 @@ export const compressionApi = {
     guardarEnsayo: async (data: any, id?: number) => {
         const sanitizedItems = (Array.isArray(data.items) ? data.items : [])
             .filter((item) => hasCompressionItemData(item))
-            .map((item: any, index: number) => ({
-                ...item,
-                item: index + 1,
-                codigo_lem: String(item.codigo_lem || '').trim().toUpperCase(),
-            }));
+            .map((item: any, index: number) => {
+                const parsedItem = Number(item?.item);
+                const normalizedItem = Number.isFinite(parsedItem) && parsedItem > 0 ? parsedItem : index + 1;
+                return {
+                    ...item,
+                    item: normalizedItem,
+                    codigo_lem: String(item.codigo_lem || '').trim().toUpperCase(),
+                };
+            });
 
         if (sanitizedItems.length === 0) {
             throw new Error('Debe completar al menos una fila válida antes de guardar.');
