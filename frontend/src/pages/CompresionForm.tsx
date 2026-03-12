@@ -631,9 +631,12 @@ const CompressionForm: React.FC = () => {
                 const isGridEmpty = !hasMeaningfulItems;
 
                 if (isGridEmpty && datosBackend.muestras && datosBackend.muestras.length > 0) {
-                    const nuevosItems = datosBackend.muestras.map((m: any, idx: number) => ({
-                        item: idx + 1,
-                        codigo_lem: formatLemCode(m.codigo_lem || ''),
+                    const muestrasOrdenadas = [...datosBackend.muestras].sort(
+                        (a: any, b: any) => (Number(a?.item_numero) || 0) - (Number(b?.item_numero) || 0)
+                    );
+                    const nuevosItems = muestrasOrdenadas.map((m: any, idx: number) => ({
+                        item: Number(m.item_numero ?? idx + 1),
+                        codigo_lem: formatLemCode(m.codigo_lem || m.codigo_muestra_lem || m.codigo_muestra || ''),
                         fecha_ensayo_programado: pickFechaProgramada(m, datosBackend.fecha_recepcion),
                         fecha_ensayo: '',
                         hora_ensayo: '',
@@ -689,8 +692,11 @@ const CompressionForm: React.FC = () => {
             if (orden) {
                 const samples = orden.muestras || orden.items || [];
                 if (samples.length > 0) {
-                    const nuevosItems = samples.map((item: any, idx: number) => ({
-                        item: idx + 1,
+                    const samplesOrdenados = [...samples].sort(
+                        (a: any, b: any) => (Number(a?.item_numero) || 0) - (Number(b?.item_numero) || 0)
+                    );
+                    const nuevosItems = samplesOrdenados.map((item: any, idx: number) => ({
+                        item: Number(item.item_numero ?? idx + 1),
                         codigo_lem: formatLemCode(item.codigo_muestra_lem || item.codigo_muestra || ''),
                         fecha_ensayo_programado: pickFechaProgramada(item, orden.fecha_recepcion),
                         fecha_ensayo: '',

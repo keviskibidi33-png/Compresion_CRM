@@ -42,10 +42,14 @@ const sanitizeCompressionItems = (items: any[]): any[] => {
         return [{ item: 1, codigo_lem: '' }];
     }
 
-    return meaningful.map((item, index) => ({
-        ...item,
-        item: index + 1,
-    }));
+    return meaningful.map((item, index) => {
+        const parsedItem = Number(item?.item ?? item?.item_numero);
+        const normalizedItem = Number.isFinite(parsedItem) && parsedItem > 0 ? parsedItem : index + 1;
+        return {
+            ...item,
+            item: normalizedItem,
+        };
+    });
 };
 
 /**

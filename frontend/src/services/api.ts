@@ -121,7 +121,7 @@ export const compressionApi = {
         const sanitizedItems = (Array.isArray(data.items) ? data.items : [])
             .filter((item) => hasCompressionItemData(item))
             .map((item: any, index: number) => {
-                const parsedItem = Number(item?.item);
+                const parsedItem = Number(item?.item ?? item?.item_numero);
                 const normalizedItem = Number.isFinite(parsedItem) && parsedItem > 0 ? parsedItem : index + 1;
                 return {
                     ...item,
