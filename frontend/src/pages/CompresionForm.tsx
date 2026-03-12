@@ -106,11 +106,15 @@ const sanitizeCompressionItemsForSave = (
 
     const filtered = source.filter((item) => hasCompressionItemData(item));
 
-    return filtered.map((item, index) => ({
-        ...item,
-        item: index + 1,
-        codigo_lem: (item.codigo_lem || '').trim().toUpperCase(),
-    }));
+    return filtered.map((item, index) => {
+        const parsedItem = Number(item.item);
+        const normalizedItem = Number.isFinite(parsedItem) && parsedItem > 0 ? parsedItem : index + 1;
+        return {
+            ...item,
+            item: normalizedItem,
+            codigo_lem: (item.codigo_lem || '').trim().toUpperCase(),
+        };
+    });
 };
 
 // Custom date input component with XX/XX/26 format and autocomplete
