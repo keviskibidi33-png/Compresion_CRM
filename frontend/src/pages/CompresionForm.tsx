@@ -744,6 +744,8 @@ const CompressionForm: React.FC = () => {
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDownloadingExcel, setIsDownloadingExcel] = useState(false);
+    const [pendingFormatAction, setPendingFormatAction] = useState<'save' | 'download' | null>(null);
+    const compressionFormatPreview = `Formato N-xxxx-SU-${new Date().getFullYear().toString().slice(-2)} COMPRESION`;
 
     const handleClearForm = () => {
         clearSavedData();
@@ -887,6 +889,19 @@ const CompressionForm: React.FC = () => {
         } finally {
             setIsDownloadingExcel(false);
         }
+    };
+
+    const handleFormatConfirm = async () => {
+        const action = pendingFormatAction;
+        setPendingFormatAction(null);
+        if (!action) return;
+
+        if (action === 'download') {
+            await handleManualDownload();
+            return;
+        }
+
+        await handleSubmit(onSubmit)();
     };
 
 
@@ -1404,7 +1419,7 @@ const CompressionForm: React.FC = () => {
                     <div className="flex justify-end gap-4">
                         <button
                             type="button"
-                            onClick={handleManualDownload}
+                            onClick={() => setPendingFormatAction('download')}
                             disabled={isSubmitting || isDownloadingExcel}
                             className="flex items-center gap-2 px-8 py-2.5 bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-100 transition-all border border-emerald-200 disabled:opacity-50"
                         >
@@ -1422,7 +1437,8 @@ const CompressionForm: React.FC = () => {
                         </button>
 
                         <button
-                            type="submit"
+                            type="button"
+                            onClick={() => setPendingFormatAction('save')}
                             disabled={isSubmitting}
                             className="flex items-center gap-2 px-8 py-2.5 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all shadow-lg shadow-slate-900/10 disabled:opacity-50"
                         >
@@ -1451,6 +1467,17 @@ const CompressionForm: React.FC = () => {
                 confirmText="Sí, eliminar"
                 cancelText="Cancelar"
                 type="danger"
+            />
+            <ConfirmModal
+                isOpen={pendingFormatAction !== null}
+                onClose={() => setPendingFormatAction(null)}
+                onConfirm={() => void handleFormatConfirm()}
+                title="Confirmar formato"
+                message={`Se generará el registro con la denominación obligatoria: ${compressionFormatPreview}`}
+                confirmText={pendingFormatAction === 'download' ? 'Continuar descarga' : 'Continuar guardado'}
+                cancelText="Cancelar"
+                type="info"
+                isLoading={isSubmitting || isDownloadingExcel}
             />
         </div>
     );
