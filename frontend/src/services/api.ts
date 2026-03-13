@@ -29,6 +29,11 @@ api.interceptors.response.use(
     }
 );
 
+const extractFilename = (contentDisposition?: string): string | undefined => {
+    const match = typeof contentDisposition === 'string' ? contentDisposition.match(/filename=\"?([^\";]+)\"?/i) : null;
+    return match?.[1];
+};
+
 export interface CompressionItem {
     item: number;
     codigo_lem: string;
@@ -115,7 +120,8 @@ export const compressionApi = {
         const response = await api.post('/api/compresion/export', data, {
             responseType: 'blob',
         });
-        return response.data;
+        const filename = extractFilename(response.headers['content-disposition']);
+        return { blob: response.data, filename };
     },
     guardarEnsayo: async (data: any, id?: number) => {
         const sanitizedItems = (Array.isArray(data.items) ? data.items : [])

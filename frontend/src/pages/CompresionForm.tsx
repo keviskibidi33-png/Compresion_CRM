@@ -8,6 +8,19 @@ import { PlusIcon, TrashIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/re
 import { CheckCircle2, XCircle, FileText, Loader2, Search, Building2, Calendar, Layers, ChevronLeft, Trash2 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 
+
+const buildFormatPreview = (sampleCode: string | undefined, materialCode: 'SU' | 'AG', ensayo: string) => {
+    const currentYear = new Date().getFullYear().toString().slice(-2)
+    const normalized = (sampleCode || '').trim().toUpperCase()
+    const fullMatch = normalized.match(/^(\d+)(?:-[A-Z0-9. ]+)?-(\d{2,4})$/)
+    const partialMatch = normalized.match(/^(\d+)(?:-(\d{2,4}))?$/)
+    const match = fullMatch || partialMatch
+    const numero = match?.[1] || 'xxxx'
+    const year = (match?.[2] || currentYear).slice(-2)
+    return `Formato N-${numero}-${materialCode}-${year} ${ensayo}`
+}
+
+
 interface CompressionFormInputs extends Omit<CompressionExportRequest, 'items'> {
     items: {
         item: number;
@@ -745,7 +758,7 @@ const CompressionForm: React.FC = () => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDownloadingExcel, setIsDownloadingExcel] = useState(false);
     const [pendingFormatAction, setPendingFormatAction] = useState<'save' | 'download' | null>(null);
-    const compressionFormatPreview = `Formato N-xxxx-SU-${new Date().getFullYear().toString().slice(-2)} COMPRESION`;
+    const compressionFormatPreview = buildFormatPreview(watchedItems.find((item) => (item.codigo_lem || '').trim())?.codigo_lem, 'SU', 'COMPRESION');
 
     const handleClearForm = () => {
         clearSavedData();
@@ -798,12 +811,14 @@ const CompressionForm: React.FC = () => {
 
     const triggerExcelDownload = async (data: CompressionFormInputs) => {
         const apiData = buildApiData(data);
-        const blob = await compressionApi.exportarExcel(apiData as any);
+        const downloadResult = await compressionApi.exportarExcel(apiData as any);
+        const blob = downloadResult instanceof Blob ? downloadResult : downloadResult.blob;
+        const filename = downloadResult instanceof Blob ? undefined : downloadResult.filename;
 
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Formato Compresión N-${data.recepcion_numero || 'temp'}.xlsx`;
+        a.download = filename || `${buildFormatPreview(watchedItems.find((item) => (item.codigo_lem || '').trim())?.codigo_lem, 'SU', 'COMPRESION')}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
