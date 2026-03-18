@@ -416,7 +416,7 @@ const CompressionForm: React.FC = () => {
         }
     });
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append, replace } = useFieldArray({
         control,
         name: "items"
     });
@@ -758,6 +758,8 @@ const CompressionForm: React.FC = () => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDownloadingExcel, setIsDownloadingExcel] = useState(false);
     const [pendingFormatAction, setPendingFormatAction] = useState<'save' | 'download' | null>(null);
+    const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const compressionFormatPreview = buildFormatPreview(watchedItems.find((item) => (item.codigo_lem || '').trim())?.codigo_lem, 'SU', 'COMPRESION');
 
     const handleClearForm = () => {
@@ -919,6 +921,36 @@ const CompressionForm: React.FC = () => {
         await handleSubmit(onSubmit)();
     };
 
+    const closeDeleteItemModal = () => {
+        setPendingDeleteIndex(null);
+        setDeleteConfirmText('');
+    };
+
+    const handleRequestDeleteItem = (index: number) => {
+        if (fields.length <= 1) {
+            toast.error('No se puede eliminar la única muestra.');
+            return;
+        }
+
+        setPendingDeleteIndex(index);
+        setDeleteConfirmText('');
+    };
+
+    const handleConfirmDeleteItem = () => {
+        if (pendingDeleteIndex === null) return;
+
+        const remainingItems = (getValues('items') || [])
+            .filter((_, index) => index !== pendingDeleteIndex)
+            .map((item, index) => ({
+                ...item,
+                item: index + 1,
+            }));
+
+        replace(remainingItems);
+        closeDeleteItemModal();
+        toast.success('Muestra eliminada');
+    };
+
 
 
     const handleClose = () => {
@@ -928,6 +960,14 @@ const CompressionForm: React.FC = () => {
             window.history.back();
         }
     };
+
+    const pendingDeleteItem = pendingDeleteIndex !== null ? watchedItems?.[pendingDeleteIndex] : undefined;
+    const deleteMatchTarget = String(pendingDeleteItem?.codigo_lem || pendingDeleteItem?.item || '').trim();
+    const deleteDisplayTarget = deleteMatchTarget || `Muestra ${pendingDeleteIndex !== null ? pendingDeleteIndex + 1 : ''}`;
+    const deleteTargetLabel = String(pendingDeleteItem?.codigo_lem || '').trim() ? 'código de la muestra' : 'número de la muestra';
+    const isDeleteMatch =
+        deleteMatchTarget !== '' &&
+        deleteConfirmText.trim().toUpperCase() === deleteMatchTarget.toUpperCase();
 
     return (
         <div className="h-screen overflow-y-auto bg-[#F8FAFC] flex flex-col font-sans antialiased">
@@ -1181,6 +1221,7 @@ const CompressionForm: React.FC = () => {
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">F. Revisado</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Aprobado</th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">F. Aprobado</th>
+                                        <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -1390,6 +1431,18 @@ const CompressionForm: React.FC = () => {
                                                     )}
                                                 />
                                             </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center justify-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRequestDeleteItem(index)}
+                                                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                                                        title="Eliminar muestra"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
 
                                         </tr>
                                     ))}
@@ -1495,6 +1548,56 @@ const CompressionForm: React.FC = () => {
                 type="info"
                 isLoading={isSubmitting || isDownloadingExcel}
             />
+            {pendingDeleteIndex !== null && pendingDeleteItem && (
+                <div className="fixed inset-0 z-[100] overflow-y-auto" role="dialog" aria-modal="true">
+                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity" onClick={closeDeleteItemModal} />
+                    <div className="flex min-h-screen items-center justify-center p-4">
+                        <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                            <div className="px-8 pt-8 pb-6">
+                                <div className="flex flex-col items-center text-center">
+                                    <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
+                                        <Trash2 className="h-7 w-7 text-red-600" />
+                                    </div>
+                                    <h3 className="mb-1 text-lg font-bold text-slate-900">Eliminar muestra</h3>
+                                    <p className="mb-4 text-sm text-slate-500">
+                                        Esta acción no se puede deshacer. Para confirmar, escribe el {deleteTargetLabel}:
+                                    </p>
+                                    <div className="mb-4 w-full rounded-xl border border-red-100 bg-red-50 p-3">
+                                        <p className="font-mono text-sm font-bold tracking-wide text-red-700">{deleteDisplayTarget}</p>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={deleteConfirmText}
+                                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                        placeholder={`Escribe "${deleteMatchTarget}" para confirmar`}
+                                        className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-center font-mono text-sm outline-none transition-all focus:border-red-400 focus:ring-2 focus:ring-red-400/20"
+                                        autoFocus
+                                        autoComplete="off"
+                                        data-lpignore="true"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex gap-3 px-8 pb-8">
+                                <button
+                                    type="button"
+                                    onClick={closeDeleteItemModal}
+                                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-100"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={!isDeleteMatch}
+                                    onClick={handleConfirmDeleteItem}
+                                    className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-500/20 transition-all hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                                >
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
