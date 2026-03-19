@@ -827,10 +827,39 @@ const CompressionForm: React.FC = () => {
         window.URL.revokeObjectURL(url);
     };
 
+    const assertRecepcionDisponibleParaGuardar = async (numeroRecepcion: string) => {
+        if (editId) return;
+
+        const numero = numeroRecepcion.trim();
+        if (!numero) return;
+
+        try {
+            const status = await compressionApi.checkStatus(numero);
+            const estadoCompresion = String(status?.compresion?.status || '').toLowerCase();
+            const yaExisteCompresion = status?.exists && (estadoCompresion === 'en_proceso' || estadoCompresion === 'completado');
+
+            if (!yaExisteCompresion) return;
+
+            setRecepcionStatus((prev) => ({
+                ...prev,
+                estado: 'ocupado',
+                mensaje: '⚠️ Ensayo ya registrado',
+            }));
+            throw new Error(`Ya existe un formato de ensayo para la recepción ${numero}.`);
+        } catch (error) {
+            if (error instanceof Error && error.message.startsWith('Ya existe un formato de ensayo')) {
+                throw error;
+            }
+
+            console.error('Error revalidando recepción antes de guardar:', error);
+        }
+    };
+
     const onSubmit = async (data: CompressionFormInputs) => {
         try {
-            const loadingToast = toast.loading('Guardando ensayo...');
             const apiData = buildApiData(data);
+            await assertRecepcionDisponibleParaGuardar(apiData.recepcion_numero || '');
+            const loadingToast = toast.loading('Guardando ensayo...');
 
             // 1. Save to Database first
             try {
@@ -840,7 +869,9 @@ const CompressionForm: React.FC = () => {
                 console.error('Error saving to DB:', saveError);
                 toast.dismiss(loadingToast);
                 const message =
-                    saveError instanceof Error && saveError.message
+                    typeof (saveError as any)?.response?.data?.detail === 'string'
+                        ? (saveError as any).response.data.detail
+                        : saveError instanceof Error && saveError.message
                         ? saveError.message
                         : 'Error al guardar en base de datos';
                 toast.error(message);
