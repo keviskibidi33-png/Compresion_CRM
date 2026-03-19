@@ -1,9 +1,11 @@
-FROM node:20-alpine as build
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm ci --no-audit --no-fund --verbose
 
 COPY . .
 ARG VITE_API_URL
