@@ -1492,7 +1492,7 @@ const CompressionForm: React.FC = () => {
                                 >
                                     <option value="-">-</option>
                                     <option value="Prensa">Prensa</option>
-                                    <option value="EQP-0023">EQP-0023</option>
+                                    <option value="INS-0054">INS-0054</option>
                                     <option value="INS-213">INS-213</option>
                                 </select>
                             </div>
