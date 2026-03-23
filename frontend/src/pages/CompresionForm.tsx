@@ -1491,9 +1491,7 @@ const CompressionForm: React.FC = () => {
                                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border"
                                 >
                                     <option value="-">-</option>
-                                    <option value="Prensa">Prensa</option>
-                                    <option value="INS-0054">INS-0054</option>
-                                    <option value="INS-213">INS-213</option>
+                                    <option value="EQP-0023">EQP-0023</option>
                                 </select>
                             </div>
                             <div>
