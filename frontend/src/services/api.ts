@@ -179,7 +179,7 @@ export const compressionApi = {
         const response = await api.get(`/api/compresion/${id}`);
         return response.data;
     },
-    listarEnsayos: async (skip = 0, limit = 100) => {
+    listarEnsayos: async (skip = 0, limit = 1000) => {
         const response = await api.get(`/api/compresion/?skip=${skip}&limit=${limit}`);
         return response.data;
     },
