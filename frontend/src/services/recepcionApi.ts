@@ -20,7 +20,7 @@ api.interceptors.request.use(
 );
 
 export const recepcionApi = {
-    listar: async (skip = 0, limit = 1000): Promise<RecepcionMuestraData[]> => {
+    listar: async (skip = 0, limit = 100): Promise<RecepcionMuestraData[]> => {
         const response = await api.get('/api/recepcion/', { params: { skip, limit } });
         return response.data;
     },
