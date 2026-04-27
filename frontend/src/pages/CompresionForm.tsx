@@ -130,13 +130,13 @@ const sanitizeCompressionItemsForSave = (
     });
 };
 
-// Custom date input component with XX/XX/26 format and autocomplete
+// Custom date input component normalized to YYYY/MM/DD
 const DateInput: React.FC<{
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
     className?: string;
-}> = ({ value, onChange, placeholder = 'dd/mm/aa', className }) => {
+}> = ({ value, onChange, placeholder = 'yyyy/mm/dd', className }) => {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let input = e.target.value;
@@ -147,7 +147,6 @@ const DateInput: React.FC<{
         // Smart Date Logic (Similar to OrdenForm)
         const digits = input.replace(/\D/g, '');
         const currentYear = new Date().getFullYear().toString();
-        const shortYear = currentYear.slice(-2); // "26"
 
         // Handle auto-formatting on specific lengths
         // We only trigger this if the user is typing "fast" (i.e. we don't want to block normal typing too much)
@@ -214,11 +213,11 @@ const DateInput: React.FC<{
                  const m = parts[1].trim().padStart(2, '0');
                  let y = (parts[2] || '').trim();
                  
-                 if (!y) y = '20' + currentYear.slice(-2);
+                 if (!y) y = currentYear;
                  else if (y.length === 2) y = '20' + y;
                  
                  if (d.length === 2 && m.length === 2 && y.length === 4) {
-                     finalDate = `${d}/${m}/${y.slice(2)}`; // Keep YY format for display as requested "XX/XX/26"
+                     finalDate = `${y}/${m}/${d}`;
                  }
              }
          } else {
@@ -236,20 +235,25 @@ const DateInput: React.FC<{
                  // 2 digits: "22" -> 02/02/YYYY. 
                  const d = digits.slice(0, 1).padStart(2,'0');
                  const m = digits.slice(1).padStart(2,'0');
-                 finalDate = `${d}/${m}/26`;
+                 finalDate = `${currentYear}/${m}/${d}`;
              } else if (digits.length === 3) { // "412" -> 04/12/26
                  const d = digits.slice(0, 1).padStart(2,'0');
                  const m = digits.slice(1, 3);
-                 finalDate = `${d}/${m}/26`;
+                 finalDate = `${currentYear}/${m}/${d}`;
              } else if (digits.length === 4) { // "0512" -> 05/12/26
+                 const m = digits.slice(0, 2);
+                 const d = digits.slice(2, 4);
+                 finalDate = `${currentYear}/${m}/${d}`;
+             } else if (digits.length === 6) { // "051226"
                  const d = digits.slice(0, 2);
                  const m = digits.slice(2, 4);
-                 finalDate = `${d}/${m}/26`;
-             } else if (digits.length === 6) { // "051226"
-                  const d = digits.slice(0, 2);
-                  const m = digits.slice(2, 4);
-                  const y = digits.slice(4);
-                  finalDate = `${d}/${m}/${y}`;
+                 const y = digits.slice(4);
+                 finalDate = `20${y}/${m}/${d}`;
+             } else if (digits.length === 8) {
+                 const y = digits.slice(0, 4);
+                 const m = digits.slice(4, 6);
+                 const d = digits.slice(6, 8);
+                 finalDate = `${y}/${m}/${d}`;
              }
          }
          
@@ -480,7 +484,7 @@ const CompressionForm: React.FC = () => {
         }
     }, []);
 
-    // Helper to format ISO to DD/MM/YY
+    // Helper to format ISO/legacy dates to YYYY/MM/DD
     const formatDateForForm = (isoDate?: string | null) => {
         if (!isoDate) return '';
         if (typeof isoDate !== 'string') return '';
@@ -488,16 +492,20 @@ const CompressionForm: React.FC = () => {
         // Case 1: ISO yyyy-mm-dd or yyyy-mm-ddTHH
         if (isoDate.includes('-')) {
             const [y, m, d] = isoDate.split('T')[0].split('-');
-            return `${d}/${m}/${y.slice(2)}`;
+            return `${y}/${m}/${d}`;
         }
 
-        // Case 2: DD/MM/YYYY or DD/MM/YY
+        // Case 2: YYYY/MM/DD or DD/MM/YYYY or DD/MM/YY
         if (isoDate.includes('/')) {
             const parts = isoDate.split('/');
             if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    const [y, m, d] = parts;
+                    return `${y}/${m.padStart(2, '0')}/${d.padStart(2, '0')}`;
+                }
                 const [d, m, y] = parts;
-                const yy = y.length === 4 ? y.slice(2) : y;
-                return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${yy}`;
+                const yyyy = y.length === 2 ? `20${y}` : y;
+                return `${yyyy}/${m.padStart(2, '0')}/${d.padStart(2, '0')}`;
             }
         }
 
@@ -1292,7 +1300,7 @@ const CompressionForm: React.FC = () => {
                                                         <DateInput
                                                             value={field.value || ''}
                                                             onChange={field.onChange}
-                                                            placeholder="dd/mm/aa"
+                                                            placeholder="yyyy/mm/dd"
                                                             className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                         />
                                                     )}
@@ -1368,7 +1376,7 @@ const CompressionForm: React.FC = () => {
                                                         <DateInput
                                                             value={field.value || ''}
                                                             onChange={field.onChange}
-                                                            placeholder="dd/mm/aa"
+                                                            placeholder="yyyy/mm/dd"
                                                             className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                         />
                                                     )}
@@ -1427,7 +1435,7 @@ const CompressionForm: React.FC = () => {
                                                         <DateInput
                                                             value={field.value || ''}
                                                             onChange={field.onChange}
-                                                            placeholder="dd/mm/aa"
+                                                            placeholder="yyyy/mm/dd"
                                                             className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                         />
                                                     )}
@@ -1456,7 +1464,7 @@ const CompressionForm: React.FC = () => {
                                                         <DateInput
                                                             value={field.value || ''}
                                                             onChange={field.onChange}
-                                                            placeholder="dd/mm/aa"
+                                                            placeholder="yyyy/mm/dd"
                                                             className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                         />
                                                     )}
