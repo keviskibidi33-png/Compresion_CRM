@@ -495,7 +495,7 @@ const CompressionForm: React.FC = () => {
             return `${y}/${m}/${d}`;
         }
 
-        // Case 2: YYYY/MM/DD or DD/MM/YYYY or DD/MM/YY
+        // Case 2: YYYY/MM/DD or YYYY/MM/DDYY or YYYY/MM/DD
         if (isoDate.includes('/')) {
             const parts = isoDate.split('/');
             if (parts.length === 3) {
