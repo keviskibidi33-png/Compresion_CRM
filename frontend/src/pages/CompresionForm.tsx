@@ -788,8 +788,11 @@ const CompressionForm: React.FC = () => {
         if (!dateStr || !dateStr.includes('/')) return undefined;
         const parts = dateStr.split('/');
         if (parts.length !== 3) return undefined;
+        if (parts[0].length === 4) {
+            const [year, month, day] = parts;
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
         const [day, month, year] = parts;
-        // Assume year '26' -> '2026'
         const fullYear = year.length === 2 ? `20${year}` : year;
         return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     };
