@@ -178,8 +178,7 @@ const DateInput: React.FC<{
         // But I can't easily change all usages to pass onBlur without editing all usages.
         // Usage: <DateInput value={...} onChange={...} />
         
-        // Alternative: Improved formatting on change for standard cases, but the specific "44" case matches 
-        // "DDMM" -> "DD/MM". 
+        // Alternative: Improved formatting on change for standard cases while enforcing YYYY/MM/DD normalization.
         
         let formatted = input;
         
@@ -1107,7 +1106,7 @@ const CompressionForm: React.FC = () => {
                                             {suggestions.map((s, i) => {
                                                 const isCompDone = s.estados?.compresion === 'completado';
                                                 const samplesCount = s.muestras_count || 0;
-                                                const receptionDate = s.fecha_recepcion ? s.fecha_recepcion.split('T')[0].split('-').reverse().join('/') : 'N/A';
+                                                const receptionDate = s.fecha_recepcion ? formatDateForForm(s.fecha_recepcion) : 'N/A';
                                                 
                                                 return (
                                                     <div 
