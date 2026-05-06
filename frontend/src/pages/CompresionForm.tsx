@@ -538,6 +538,15 @@ const CompressionForm: React.FC = () => {
         return formattedRaw || formattedFallback || getTodayCompressionDate();
     };
 
+    const pickFechaEnsayo = (item: any, fallback?: string) => {
+        const raw = item?.fecha_ensayo
+            || item?.fechaEnsayo
+            || item?.fecha_ensayo_real
+            || item?.fechaEnsayoReal;
+        const formattedRaw = raw ? formatDateForForm(raw) : '';
+        return formattedRaw || pickFechaProgramada(item, fallback);
+    };
+
     const syncDateIfMissing = (path: string, value: string) => {
         const currentValue = String(getValues(path as any) || '').trim();
         if (!currentValue) {
@@ -573,7 +582,7 @@ const CompressionForm: React.FC = () => {
                     item: it.item,
                     codigo_lem: it.codigo_lem,
                     fecha_ensayo_programado: formatDateForForm(it.fecha_ensayo_programado),
-                    fecha_ensayo: formatDateForForm(it.fecha_ensayo),
+                    fecha_ensayo: formatDateForForm(it.fecha_ensayo) || formatDateForForm(it.fecha_ensayo_programado),
                     hora_ensayo: it.hora_ensayo || '',
                     carga_maxima: it.carga_maxima,
                     tipo_fractura: it.tipo_fractura,
@@ -695,7 +704,7 @@ const CompressionForm: React.FC = () => {
                         item: Number(m.item_numero ?? idx + 1),
                         codigo_lem: formatLemCode(m.codigo_lem || m.codigo_muestra_lem || m.codigo_muestra || ''),
                         fecha_ensayo_programado: pickFechaProgramada(m, datosBackend.fecha_recepcion),
-                        fecha_ensayo: '',
+                        fecha_ensayo: pickFechaEnsayo(m, datosBackend.fecha_recepcion),
                         hora_ensayo: '',
                         carga_maxima: undefined,
                         tipo_fractura: '',
@@ -756,7 +765,7 @@ const CompressionForm: React.FC = () => {
                         item: Number(item.item_numero ?? idx + 1),
                         codigo_lem: formatLemCode(item.codigo_muestra_lem || item.codigo_muestra || ''),
                         fecha_ensayo_programado: pickFechaProgramada(item, orden.fecha_recepcion),
-                        fecha_ensayo: '',
+                        fecha_ensayo: pickFechaEnsayo(item, orden.fecha_recepcion),
                         hora_ensayo: '',
                         carga_maxima: undefined,
                         tipo_fractura: '',
