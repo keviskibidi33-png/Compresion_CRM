@@ -49,6 +49,46 @@ const REVISADO_OPTIONS = ['Fabian la Rosa'];
 const APROBADO_OPTIONS = ['Irma Coaquira'];
 const DEFECTOS_OPTIONS = ['Ninguno', 'A', 'B', 'C', 'D', 'E'];
 const TIPO_FRACTURA_OPTIONS = ['1', '2', '3', '4', '5', '6'];
+const REVISADO_AUTOFILL_DATE = 'Fabian la Rosa';
+const APROBADO_AUTOFILL_DATE = 'Irma Coaquira';
+const PERU_TIME_ZONE = 'America/Lima';
+
+const getTodayCompressionDate = (): string => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: PERU_TIME_ZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(new Date());
+
+    const year = parts.find((part) => part.type === 'year')?.value || '';
+    const month = parts.find((part) => part.type === 'month')?.value || '';
+    const day = parts.find((part) => part.type === 'day')?.value || '';
+
+    return `${year}/${month}/${day}`;
+};
+
+const createCompressionItemTemplate = (item: number, withTodayDates = false): CompressionFormInputs['items'][number] => {
+    const today = getTodayCompressionDate();
+    return {
+        item,
+        codigo_lem: '',
+        fecha_ensayo_programado: withTodayDates ? today : '',
+        fecha_ensayo: withTodayDates ? today : '',
+        hora_ensayo: '',
+        carga_maxima: undefined,
+        tipo_fractura: '',
+        defectos: '',
+        defectos_custom: '',
+        realizado: '',
+        revisado: '',
+        fecha_revisado: '',
+        aprobado: '',
+        fecha_aprobado: '',
+        diametro: undefined,
+        area: undefined,
+    };
+};
 
 // Helper to format LEM code with -CO-YY suffix
 const formatLemCode = (value: string): string => {
@@ -91,17 +131,13 @@ const hasCompressionItemData = (item: CompressionFormInputs['items'][number] | u
     const tieneCodigoUtil = !codigoEsPlaceholder;
 
     const textFields = [
-        item.fecha_ensayo_programado,
-        item.fecha_ensayo,
         item.hora_ensayo,
         item.tipo_fractura,
         item.defectos,
         item.defectos_custom,
         item.realizado,
         item.revisado,
-        item.fecha_revisado,
         item.aprobado,
-        item.fecha_aprobado,
     ];
 
     if (tieneCodigoUtil || textFields.some((value) => typeof value === 'string' && value.trim() !== '')) {
@@ -130,6 +166,95 @@ const sanitizeCompressionItemsForSave = (
     });
 };
 
+const DATE_FORMAT_HINT = 'AAAA/MM/DD (ej. 2026/04/18)';
+
+const padDateSegment = (value: number): string => String(value).padStart(2, '0');
+
+const isValidCalendarDate = (year: number, month: number, day: number): boolean => {
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return false;
+    if (year < 2000 || year > 2100) return false;
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+
+    const probe = new Date(year, month - 1, day);
+    return (
+        probe.getFullYear() === year &&
+        probe.getMonth() === month - 1 &&
+        probe.getDate() === day
+    );
+};
+
+const normalizeDateInputValue = (
+    rawValue?: string
+): { normalized: string; iso: string } | null => {
+    const trimmed = String(rawValue || '').trim();
+    if (!trimmed) return null;
+
+    const currentYear = new Date().getFullYear();
+    let year: number | null = null;
+    let month: number | null = null;
+    let day: number | null = null;
+
+    if (trimmed.includes('/')) {
+        const parts = trimmed
+            .split('/')
+            .map((part) => part.trim())
+            .filter((part) => part !== '');
+
+        if (parts.length === 2) {
+            day = Number(parts[0]);
+            month = Number(parts[1]);
+            year = currentYear;
+        } else if (parts.length === 3) {
+            if (parts[0].length === 4) {
+                year = Number(parts[0]);
+                month = Number(parts[1]);
+                day = Number(parts[2]);
+            } else {
+                day = Number(parts[0]);
+                month = Number(parts[1]);
+                year = Number(parts[2].length === 2 ? `20${parts[2]}` : parts[2]);
+            }
+        } else {
+            return null;
+        }
+    } else {
+        const digits = trimmed.replace(/\D/g, '');
+
+        if (digits.length === 2) {
+            day = Number(digits.slice(0, 1));
+            month = Number(digits.slice(1, 2));
+            year = currentYear;
+        } else if (digits.length === 3) {
+            day = Number(digits.slice(0, 1));
+            month = Number(digits.slice(1, 3));
+            year = currentYear;
+        } else if (digits.length === 4) {
+            month = Number(digits.slice(0, 2));
+            day = Number(digits.slice(2, 4));
+            year = currentYear;
+        } else if (digits.length === 6) {
+            day = Number(digits.slice(0, 2));
+            month = Number(digits.slice(2, 4));
+            year = Number(`20${digits.slice(4, 6)}`);
+        } else if (digits.length === 8) {
+            year = Number(digits.slice(0, 4));
+            month = Number(digits.slice(4, 6));
+            day = Number(digits.slice(6, 8));
+        } else {
+            return null;
+        }
+    }
+
+    if (year === null || month === null || day === null) return null;
+    if (!isValidCalendarDate(year, month, day)) return null;
+
+    const normalized = `${year}/${padDateSegment(month)}/${padDateSegment(day)}`;
+    const iso = `${year}-${padDateSegment(month)}-${padDateSegment(day)}`;
+
+    return { normalized, iso };
+};
+
 // Custom date input component normalized to YYYY/MM/DD
 const DateInput: React.FC<{
     value: string;
@@ -140,125 +265,32 @@ const DateInput: React.FC<{
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let input = e.target.value;
+        e.target.setCustomValidity('');
 
         // Allow only digits and slashes
         input = input.replace(/[^\d/]/g, '');
-        
-        // Smart Date Logic (Similar to OrdenForm)
-        const digits = input.replace(/\D/g, '');
-        const currentYear = new Date().getFullYear().toString();
 
-        // Handle auto-formatting on specific lengths
-        // We only trigger this if the user is typing "fast" (i.e. we don't want to block normal typing too much)
-        // But for a controlled input, we might want to do it on blur or be careful.
-        // However, the previous logic did it on change.
-        // Let's adapt the user's request: "44=04/04/26", "412=04/12/26".
-        // This is tricky on `onChange` because "4" is a prefix of "44".
-        // Use logic similar to OrdenForm but applied here.
-        // NOTE: React Hook Form Controller handles the value.
-        // This is a custom input.
-        
-        // Strategy: Just format strict typing, but the smart expansion works best on Blur or specific triggers.
-        // The previous code did: if (digitsOnly.length === 4) formatted += '/26';
-        
-        // Let's stick to the previous behavior + strict masking for now, 
-        // BUT the user explicit request "hazlos inteligentes" implies the behavior from OrdenForm.
-        // In OrdenForm it was ON BLUR.
-        // Here it is onChange. Doing it onChange prevents correcting "4" to "04" before typing the next digit.
-        
-        // We will keep basic formatting here and Move Smart Logic to onBlur if possible, 
-        // OR we try to be smart about slashes.
-        
-        // Actually, looking at lines 67-110, this component receives `onChange`.
-        // I will interpret the user's request as "enable the same smart logic". 
-        // Since `DateInput` is used in a specific way, I'll update it to accept an `onBlur` prop 
-        // and implement the smart logic there, which is safer.
-        
-        // Wait, the component definition at 67 doesn't have onBlur. I need to add it.
-        // But I can't easily change all usages to pass onBlur without editing all usages.
-        // Usage: <DateInput value={...} onChange={...} />
-        
-        // Alternative: Improved formatting on change for standard cases while enforcing YYYY/MM/DD normalization.
-        
-        let formatted = input;
-        
-        // Standard slash insertion for DDMMYYYY or DDMMYY
-        if (digits.length >= 2 && !input.includes('/')) {
-             // If they typed 2 digits, don't force slash immediately unless we are sure?
-             // Actually standard date inputs usually add slash after 2.
-        }
-        
-        onChange(formatted);
+        onChange(input);
     };
 
-    // New onBlur to handle the "Smart" transformation
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-         let val = e.target.value;
-         if (!val) return;
-         
-         const digits = val.replace(/\D/g, '');
-         const currentYear = new Date().getFullYear().toString();
-         
-         let finalDate = val;
+        const val = e.target.value;
+        if (!val) {
+            e.target.setCustomValidity('');
+            return;
+        }
 
-         // Case 0.5: "1" or "2" -> "01" or "02"? No, too aggressive.
-         
-         // Logic from OrdenForm (Smart Date)
-         
-         if (val.includes('/')) {
-             const parts = val.split('/');
-             if (parts.length >= 2) {
-                 const d = parts[0].trim().padStart(2, '0');
-                 const m = parts[1].trim().padStart(2, '0');
-                 let y = (parts[2] || '').trim();
-                 
-                 if (!y) y = currentYear;
-                 else if (y.length === 2) y = '20' + y;
-                 
-                 if (d.length === 2 && m.length === 2 && y.length === 4) {
-                     finalDate = `${y}/${m}/${d}`;
-                 }
-             }
-         } else {
-             // Digit only map
-             if (digits.length === 2) { // "44" -> 04/04/26 ?? No "22" -> 02/02/YEAR in OrdenForm
-                 // Wait, "44" -> "04/04" is ambiguous. "22" could be "22nd".
-                 // User example: "44=04/04/26". 
-                 // This implies D=4, M=4. 
-                 // Logic: split 2 digits into D and M?
-                 // "44" -> D=4, M=4?
-                 // "22" -> D=2, M=2?
-                 // "12" -> D=1, M=2?
-                 // Only if first digit > 3? No.
-                 // Let's stick to the OrdenForm logic which was:
-                 // 2 digits: "22" -> 02/02/YYYY. 
-                 const d = digits.slice(0, 1).padStart(2,'0');
-                 const m = digits.slice(1).padStart(2,'0');
-                 finalDate = `${currentYear}/${m}/${d}`;
-             } else if (digits.length === 3) { // "412" -> 04/12/26
-                 const d = digits.slice(0, 1).padStart(2,'0');
-                 const m = digits.slice(1, 3);
-                 finalDate = `${currentYear}/${m}/${d}`;
-             } else if (digits.length === 4) { // "0512" -> 05/12/26
-                 const m = digits.slice(0, 2);
-                 const d = digits.slice(2, 4);
-                 finalDate = `${currentYear}/${m}/${d}`;
-             } else if (digits.length === 6) { // "051226"
-                 const d = digits.slice(0, 2);
-                 const m = digits.slice(2, 4);
-                 const y = digits.slice(4);
-                 finalDate = `20${y}/${m}/${d}`;
-             } else if (digits.length === 8) {
-                 const y = digits.slice(0, 4);
-                 const m = digits.slice(4, 6);
-                 const d = digits.slice(6, 8);
-                 finalDate = `${y}/${m}/${d}`;
-             }
-         }
-         
-         if (finalDate !== val) {
-             onChange(finalDate);
-         }
+        const normalized = normalizeDateInputValue(val);
+        if (!normalized) {
+            e.target.setCustomValidity(`Fecha inválida. Use ${DATE_FORMAT_HINT}.`);
+            e.target.reportValidity();
+            return;
+        }
+
+        e.target.setCustomValidity('');
+        if (normalized.normalized !== val) {
+            onChange(normalized.normalized);
+        }
     };
 
     return (
@@ -396,22 +428,7 @@ const CompressionForm: React.FC = () => {
     const handleItemsTableKeyDown = useEnterTableNavigation();
     const { register, control, handleSubmit, setValue, watch, reset, getValues, formState: { errors, isSubmitting } } = useForm<CompressionFormInputs>({
         defaultValues: {
-            items: Array.from({ length: 4 }).map((_, i) => ({
-                item: i + 1,
-                codigo_lem: '',
-                fecha_ensayo_programado: '',
-                fecha_ensayo: '',
-                hora_ensayo: '',
-                carga_maxima: undefined,
-                tipo_fractura: '',
-                defectos: '',
-                defectos_custom: '',
-                realizado: '',
-                revisado: '',
-                fecha_revisado: '',
-                aprobado: '',
-                fecha_aprobado: '',
-            })),
+            items: Array.from({ length: 4 }).map((_, i) => createCompressionItemTemplate(i + 1, true)),
             recepcion_numero: '',
             ot_numero: '',
             recepcion_id: undefined, // Initialize
@@ -516,7 +533,27 @@ const CompressionForm: React.FC = () => {
             || item?.fechaRotura
             || item?.fecha_ensayo_programado
             || item?.fechaEnsayoProgramado;
-        return raw ? formatDateForForm(raw) : fallback ? formatDateForForm(fallback) : '';
+        const formattedRaw = raw ? formatDateForForm(raw) : '';
+        const formattedFallback = fallback ? formatDateForForm(fallback) : '';
+        return formattedRaw || formattedFallback || getTodayCompressionDate();
+    };
+
+    const syncDateIfMissing = (path: string, value: string) => {
+        const currentValue = String(getValues(path as any) || '').trim();
+        if (!currentValue) {
+            setValue(path as any, value, { shouldDirty: true, shouldTouch: true });
+        }
+    };
+
+    const syncLinkedFechaEnsayo = (index: number, nextProgramada: string) => {
+        const currentEnsayoPath = `items.${index}.fecha_ensayo` as const;
+        const currentProgramada = String(getValues(`items.${index}.fecha_ensayo_programado` as const) || '').trim();
+        const currentEnsayo = String(getValues(currentEnsayoPath) || '').trim();
+        const shouldSync = !currentEnsayo || currentEnsayo === currentProgramada;
+
+        if (shouldSync) {
+            setValue(currentEnsayoPath, nextProgramada, { shouldDirty: true, shouldTouch: true });
+        }
     };
 
     const loadEnsayo = async (id: number) => {
@@ -775,7 +812,7 @@ const CompressionForm: React.FC = () => {
             recepcion_numero: '',
             ot_numero: '',
             recepcion_id: undefined,
-            items: [{ item: 1, codigo_lem: '' }],
+            items: Array.from({ length: 4 }).map((_, i) => createCompressionItemTemplate(i + 1, true)),
             codigo_equipo: '-',
             otros: '',
             nota: ''
@@ -784,17 +821,13 @@ const CompressionForm: React.FC = () => {
         setIsDeleteModalOpen(false);
     };
 
-    const formatDateToISO = (dateStr?: string) => {
-        if (!dateStr || !dateStr.includes('/')) return undefined;
-        const parts = dateStr.split('/');
-        if (parts.length !== 3) return undefined;
-        if (parts[0].length === 4) {
-            const [year, month, day] = parts;
-            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    const formatDateToISO = (dateStr?: string, contextLabel?: string) => {
+        if (!dateStr || !dateStr.trim()) return undefined;
+        const normalized = normalizeDateInputValue(dateStr);
+        if (!normalized) {
+            throw new Error(`${contextLabel || 'Fecha'} inválida: "${dateStr}". Use ${DATE_FORMAT_HINT}.`);
         }
-        const [day, month, year] = parts;
-        const fullYear = year.length === 2 ? `20${year}` : year;
-        return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        return normalized.iso;
     };
 
     const buildApiData = (data: CompressionFormInputs) => {
@@ -806,13 +839,13 @@ const CompressionForm: React.FC = () => {
 
         return {
             ...data,
-            items: sanitizedItems.map(it => ({
+            items: sanitizedItems.map((it, index) => ({
                 ...it,
                 item: Number(it.item),
-                fecha_ensayo_programado: formatDateToISO(it.fecha_ensayo_programado),
-                fecha_ensayo: formatDateToISO(it.fecha_ensayo),
-                fecha_revisado: formatDateToISO(it.fecha_revisado),
-                fecha_aprobado: formatDateToISO(it.fecha_aprobado),
+                fecha_ensayo_programado: formatDateToISO(it.fecha_ensayo_programado, `Fecha Ensayo Programado en fila ${index + 1}`),
+                fecha_ensayo: formatDateToISO(it.fecha_ensayo, `Fecha Ensayo en fila ${index + 1}`),
+                fecha_revisado: formatDateToISO(it.fecha_revisado, `Fecha Revisado en fila ${index + 1}`),
+                fecha_aprobado: formatDateToISO(it.fecha_aprobado, `Fecha Aprobado en fila ${index + 1}`),
                 carga_maxima: it.carga_maxima ? Number(it.carga_maxima) : undefined,
                 defectos: it.defectos === 'Otro' ? it.defectos_custom : it.defectos,
                 diametro: it.diametro ? Number(it.diametro) : undefined,
@@ -894,24 +927,7 @@ const CompressionForm: React.FC = () => {
                 recepcion_numero: '',
                 ot_numero: '',
                 recepcion_id: undefined,
-                items: Array.from({ length: 4 }).map((_, i) => ({
-                    item: i + 1,
-                    codigo_lem: '',
-                    fecha_ensayo_programado: '',
-                    fecha_ensayo: '',
-                    hora_ensayo: '',
-                    carga_maxima: undefined,
-                    tipo_fractura: '',
-                    defectos: '',
-                    defectos_custom: '',
-                    realizado: '',
-                    revisado: '',
-                    fecha_revisado: '',
-                    aprobado: '',
-                    fecha_aprobado: '',
-                    diametro: undefined,
-                    area: undefined,
-                })),
+                items: Array.from({ length: 4 }).map((_, i) => createCompressionItemTemplate(i + 1, true)),
                 codigo_equipo: '-',
                 otros: '',
                 nota: '',
@@ -1221,25 +1237,15 @@ const CompressionForm: React.FC = () => {
                     {/* Items Table */}
                     <div className="bg-white shadow rounded-lg">
                         <div className="px-6 py-4 flex justify-between items-center bg-gray-50 border-b border-gray-200">
-                            <h3 className="text-lg leading-6 font-medium text-gray-900">Items de Ensayo</h3>
+                            <div className="space-y-1">
+                                <h3 className="text-lg leading-6 font-medium text-gray-900">Items de Ensayo</h3>
+                                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                                    Autofill activo: fecha programada copia fecha ensayo y Fabian/Irma completan la fecha actual.
+                                </p>
+                            </div>
                             <button
                                 type="button"
-                                onClick={() => append({
-                                    item: fields.length + 1,
-                                    codigo_lem: '',
-                                    fecha_ensayo_programado: '',
-                                    fecha_ensayo: '',
-                                    hora_ensayo: '',
-                                    carga_maxima: undefined,
-                                    tipo_fractura: '',
-                                    defectos: '',
-                                    defectos_custom: '',
-                                    realizado: '',
-                                    revisado: '',
-                                    fecha_revisado: '',
-                                    aprobado: '',
-                                    fecha_aprobado: '',
-                                })}
+                                onClick={() => append(createCompressionItemTemplate(fields.length + 1, true))}
                                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             >
                                 <PlusIcon className="h-4 w-4 mr-2" /> Agregar Fila
@@ -1301,7 +1307,10 @@ const CompressionForm: React.FC = () => {
                                                     render={({ field }) => (
                                                         <DateInput
                                                             value={field.value || ''}
-                                                            onChange={field.onChange}
+                                                            onChange={(value) => {
+                                                                field.onChange(value);
+                                                                syncLinkedFechaEnsayo(index, value);
+                                                            }}
                                                             placeholder="yyyy/mm/dd"
                                                             className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
                                                         />
@@ -1417,15 +1426,28 @@ const CompressionForm: React.FC = () => {
 
                                             {/* Revisado */}
                                             <td className="px-4 py-3">
-                                                <select
-                                                    {...register(`items.${index}.revisado` as const)}
-                                                    className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
-                                                >
-                                                    <option value="">-</option>
-                                                    {REVISADO_OPTIONS.map(opt => (
-                                                        <option key={opt} value={opt}>{opt}</option>
-                                                    ))}
-                                                </select>
+                                                <Controller
+                                                    name={`items.${index}.revisado` as const}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <select
+                                                            value={field.value || ''}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                field.onChange(value);
+                                                                if (value === REVISADO_AUTOFILL_DATE) {
+                                                                    syncDateIfMissing(`items.${index}.fecha_revisado`, getTodayCompressionDate());
+                                                                }
+                                                            }}
+                                                            className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                        >
+                                                            <option value="">-</option>
+                                                            {REVISADO_OPTIONS.map(opt => (
+                                                                <option key={opt} value={opt}>{opt}</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
+                                                />
                                             </td>
 
                                             {/* Fecha Revisado */}
@@ -1446,15 +1468,28 @@ const CompressionForm: React.FC = () => {
 
                                             {/* Aprobado */}
                                             <td className="px-4 py-3">
-                                                <select
-                                                    {...register(`items.${index}.aprobado` as const)}
-                                                    className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
-                                                >
-                                                    <option value="">-</option>
-                                                    {APROBADO_OPTIONS.map(opt => (
-                                                        <option key={opt} value={opt}>{opt}</option>
-                                                    ))}
-                                                </select>
+                                                <Controller
+                                                    name={`items.${index}.aprobado` as const}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <select
+                                                            value={field.value || ''}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                field.onChange(value);
+                                                                if (value === APROBADO_AUTOFILL_DATE) {
+                                                                    syncDateIfMissing(`items.${index}.fecha_aprobado`, getTodayCompressionDate());
+                                                                }
+                                                            }}
+                                                            className="block w-32 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm p-2 border"
+                                                        >
+                                                            <option value="">-</option>
+                                                            {APROBADO_OPTIONS.map(opt => (
+                                                                <option key={opt} value={opt}>{opt}</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
+                                                />
                                             </td>
 
                                             {/* Fecha Aprobado */}
