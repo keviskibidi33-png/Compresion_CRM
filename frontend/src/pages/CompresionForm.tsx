@@ -436,7 +436,7 @@ const OTInput: React.FC<{
 
 const CompressionForm: React.FC = () => {
     const handleItemsTableKeyDown = useEnterTableNavigation();
-    const { register, control, setValue, watch, reset, getValues, formState: { errors, isSubmitting } } = useForm<CompressionFormInputs>({
+    const { register, control, handleSubmit, setValue, watch, reset, getValues, formState: { errors, isSubmitting } } = useForm<CompressionFormInputs>({
         defaultValues: {
             items: Array.from({ length: 4 }).map((_, i) => createCompressionItemTemplate(i + 1, true)),
             recepcion_numero: '',
