@@ -166,6 +166,16 @@ const sanitizeCompressionItemsForSave = (
     });
 };
 
+const getInitialCompresionEditId = (): number | null => {
+    if (typeof window === 'undefined') return null;
+
+    const idParam = new URLSearchParams(window.location.search).get('id');
+    if (!idParam) return null;
+
+    const parsed = Number.parseInt(idParam, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
 const DATE_FORMAT_HINT = 'AAAA/MM/DD (ej. 2026/04/18)';
 
 const padDateSegment = (value: number): string => String(value).padStart(2, '0');
@@ -426,7 +436,7 @@ const OTInput: React.FC<{
 
 const CompressionForm: React.FC = () => {
     const handleItemsTableKeyDown = useEnterTableNavigation();
-    const { register, control, handleSubmit, setValue, watch, reset, getValues, formState: { errors, isSubmitting } } = useForm<CompressionFormInputs>({
+    const { register, control, setValue, watch, reset, getValues, formState: { errors, isSubmitting } } = useForm<CompressionFormInputs>({
         defaultValues: {
             items: Array.from({ length: 4 }).map((_, i) => createCompressionItemTemplate(i + 1, true)),
             recepcion_numero: '',
@@ -443,7 +453,6 @@ const CompressionForm: React.FC = () => {
 
     // Track which rows have "Otro" selected for defectos
     const watchedItems = watch('items');
-
     // Search status state
     const [recepcionStatus, setRecepcionStatus] = useState<{
         estado: 'idle' | 'buscando' | 'disponible' | 'ocupado';
@@ -461,9 +470,8 @@ const CompressionForm: React.FC = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     // Check for ID in URL for Edit Mode
-    const [editId, setEditId] = useState<number | null>(null);
+    const [editId, setEditId] = useState<number | null>(() => getInitialCompresionEditId());
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
     // Sticky scrollbar sync refs
     const tableScrollRef = useRef<HTMLDivElement>(null);
     const stickyScrollRef = useRef<HTMLDivElement>(null);
@@ -487,16 +495,10 @@ const CompressionForm: React.FC = () => {
         return () => { table.removeEventListener('scroll', syncFromTable); sticky.removeEventListener('scroll', syncFromSticky); observer.disconnect(); };
     }, []);
 
-    React.useEffect(() => {
-        const searchParams = new URLSearchParams(window.location.search);
-        const idParam = searchParams.get('id');
-
-        if (idParam) {
-            const id = parseInt(idParam, 10);
-            if (!isNaN(id)) {
-                setEditId(id);
-                loadEnsayo(id);
-            }
+    useEffect(() => {
+        const initialEditId = getInitialCompresionEditId();
+        if (initialEditId !== null) {
+            void loadEnsayo(initialEditId);
         }
     }, []);
 
@@ -567,6 +569,7 @@ const CompressionForm: React.FC = () => {
 
     const loadEnsayo = async (id: number) => {
         try {
+            setEditId(id);
             const loadingToast = toast.loading('Cargando datos del ensayo...');
             const data = await compressionApi.obtenerEnsayo(id);
 
@@ -806,7 +809,7 @@ const CompressionForm: React.FC = () => {
     }), [watch, setValue, reset, buscarRecepcion]);
 
     // Local Storage Persistence
-    const { clearSavedData, hasSavedData } = useFormPersist("compresion-form-draft", formMethodsMemo as any);
+    const { clearSavedData, hasSavedData } = useFormPersist("compresion-form-draft", formMethodsMemo as any, !editId);
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDownloadingExcel, setIsDownloadingExcel] = useState(false);
@@ -817,6 +820,12 @@ const CompressionForm: React.FC = () => {
 
     const handleClearForm = () => {
         clearSavedData();
+        setEditId(null);
+        if (typeof window !== 'undefined') {
+            const nextUrl = new URL(window.location.href);
+            nextUrl.searchParams.delete('id');
+            window.history.replaceState({}, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+        }
         reset({
             recepcion_numero: '',
             ot_numero: '',
@@ -828,6 +837,7 @@ const CompressionForm: React.FC = () => {
         });
         setRecepcionStatus({ estado: 'idle', mensaje: '', datos: null, formatos: undefined });
         setIsDeleteModalOpen(false);
+        setPendingFormatAction(null);
     };
 
     const formatDateToISO = (dateStr?: string, contextLabel?: string) => {
@@ -924,8 +934,8 @@ const CompressionForm: React.FC = () => {
                     typeof (saveError as any)?.response?.data?.detail === 'string'
                         ? (saveError as any).response.data.detail
                         : saveError instanceof Error && saveError.message
-                        ? saveError.message
-                        : 'Error al guardar en base de datos';
+                            ? saveError.message
+                            : 'Error al guardar en base de datos';
                 toast.error(message);
                 return;
             }
@@ -987,6 +997,14 @@ const CompressionForm: React.FC = () => {
         await handleSubmit(onSubmit)();
     };
 
+    const handleClose = () => {
+        if (window.self !== window.top) {
+            window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*');
+        } else {
+            window.history.back();
+        }
+    };
+
     const closeDeleteItemModal = () => {
         setPendingDeleteIndex(null);
         setDeleteConfirmText('');
@@ -1018,14 +1036,6 @@ const CompressionForm: React.FC = () => {
     };
 
 
-
-    const handleClose = () => {
-        if (window.self !== window.top) {
-            window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*');
-        } else {
-            window.history.back();
-        }
-    };
 
     const pendingDeleteItem = pendingDeleteIndex !== null ? watchedItems?.[pendingDeleteIndex] : undefined;
     const deleteMatchTarget = String(pendingDeleteItem?.codigo_lem || pendingDeleteItem?.item || '').trim();
