@@ -53,6 +53,21 @@ const REVISADO_AUTOFILL_DATE = 'Fabian la Rosa';
 const APROBADO_AUTOFILL_DATE = 'Irma Coaquira';
 const PERU_TIME_ZONE = 'America/Lima';
 
+const EQUIPO_NOMBRES: Record<string, string> = {
+    'EQP-0023': 'PRENSA CONCRETO',
+};
+
+const EQUIPO_OPTIONS = Object.entries(EQUIPO_NOMBRES).map(([codigo, nombre]) => ({
+    codigo,
+    nombre,
+    label: `${codigo} - ${nombre}`,
+}));
+
+const resolveNombreEquipo = (codigo: string | undefined): string => {
+    if (!codigo || codigo === '-') return '';
+    return EQUIPO_NOMBRES[codigo] || '';
+};
+
 const getTodayCompressionDate = (): string => {
     const parts = new Intl.DateTimeFormat('en-CA', {
         timeZone: PERU_TIME_ZONE,
@@ -858,6 +873,7 @@ const CompressionForm: React.FC = () => {
 
         return {
             ...data,
+            nombre_equipo: data.codigo_equipo && data.codigo_equipo !== '-' ? resolveNombreEquipo(data.codigo_equipo) || undefined : undefined,
             items: sanitizedItems.map((it, index) => ({
                 ...it,
                 item: Number(it.item),
@@ -1555,8 +1571,15 @@ const CompressionForm: React.FC = () => {
                                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border"
                                 >
                                     <option value="-">-</option>
-                                    <option value="EQP-0023">EQP-0023</option>
+                                    {EQUIPO_OPTIONS.map((eq) => (
+                                        <option key={eq.codigo} value={eq.codigo}>{eq.label}</option>
+                                    ))}
                                 </select>
+                                {watch('codigo_equipo') && watch('codigo_equipo') !== '-' && (
+                                    <p className="mt-1 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-md inline-block">
+                                        {resolveNombreEquipo(watch('codigo_equipo'))}
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Otros (35 I-J)</label>

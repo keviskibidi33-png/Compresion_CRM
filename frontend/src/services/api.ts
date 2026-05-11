@@ -210,6 +210,7 @@ export interface CompressionExportRequest {
     ot_numero: string;
     items: CompressionItem[];
     codigo_equipo?: string;
+    nombre_equipo?: string;
     otros?: string;
     nota?: string;
     recepcion_id?: number; // Added to link with reception
