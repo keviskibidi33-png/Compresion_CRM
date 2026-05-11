@@ -831,7 +831,7 @@ const CompressionForm: React.FC = () => {
     const [pendingFormatAction, setPendingFormatAction] = useState<'save' | 'download' | null>(null);
     const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
-    const compressionFormatPreview = buildFormatPreview(watchedItems.find((item) => (item.codigo_lem || '').trim())?.codigo_lem, 'SU', 'COMPRESION');
+    const compressionFormatPreview = buildFormatPreview(watch('recepcion_numero'), 'SU', 'COMPRESION');
 
     const handleClearForm = () => {
         clearSavedData();
@@ -898,7 +898,7 @@ const CompressionForm: React.FC = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename || `${buildFormatPreview(watchedItems.find((item) => (item.codigo_lem || '').trim())?.codigo_lem, 'SU', 'COMPRESION')}.xlsx`;
+        a.download = filename || `${buildFormatPreview(data.recepcion_numero, 'SU', 'COMPRESION')}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
