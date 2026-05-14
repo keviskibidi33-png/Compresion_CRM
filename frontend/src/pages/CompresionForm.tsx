@@ -720,7 +720,7 @@ const CompressionForm: React.FC = () => {
                     );
                     const nuevosItems = muestrasOrdenadas.map((m: any, idx: number) => ({
                         item: Number(m.item_numero ?? idx + 1),
-                        codigo_lem: formatLemCode(m.codigo_lem || m.codigo_muestra_lem || m.codigo_muestra || ''),
+                        codigo_lem: formatLemCode(m.codigo_lem || m.codigo_muestra_lem || ''),
                         fecha_ensayo_programado: pickFechaProgramada(m, datosBackend.fecha_recepcion),
                         fecha_ensayo: pickFechaEnsayo(m, datosBackend.fecha_recepcion),
                         hora_ensayo: '',
@@ -781,7 +781,7 @@ const CompressionForm: React.FC = () => {
                     );
                     const nuevosItems = samplesOrdenados.map((item: any, idx: number) => ({
                         item: Number(item.item_numero ?? idx + 1),
-                        codigo_lem: formatLemCode(item.codigo_muestra_lem || item.codigo_muestra || ''),
+                        codigo_lem: formatLemCode(item.codigo_lem || item.codigo_muestra_lem || ''),
                         fecha_ensayo_programado: pickFechaProgramada(item, orden.fecha_recepcion),
                         fecha_ensayo: pickFechaEnsayo(item, orden.fecha_recepcion),
                         hora_ensayo: '',
