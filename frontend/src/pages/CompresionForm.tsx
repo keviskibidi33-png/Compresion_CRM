@@ -1583,7 +1583,7 @@ const CompressionForm: React.FC = () => {
                                                             onChange={(e) => {
                                                                 const value = e.target.value;
                                                                 field.onChange(value);
-                                                                if (value === REVISADO_AUTOFILL_DATE) {
+                                                                if (value && value !== '-') {
                                                                     syncDateIfMissing(`items.${index}.fecha_revisado`, getTodayCompressionDate());
                                                                 }
                                                             }}
@@ -1625,7 +1625,7 @@ const CompressionForm: React.FC = () => {
                                                             onChange={(e) => {
                                                                 const value = e.target.value;
                                                                 field.onChange(value);
-                                                                if (value === APROBADO_AUTOFILL_DATE) {
+                                                                if (value && value !== '-') {
                                                                     syncDateIfMissing(`items.${index}.fecha_aprobado`, getTodayCompressionDate());
                                                                 }
                                                             }}
