@@ -163,6 +163,29 @@ const hasCompressionItemData = (item: CompressionFormInputs['items'][number] | u
     return numericFields.some((value) => value !== undefined && value !== null && String(value).trim() !== '');
 };
 
+// Used only to decide whether a loaded draft already has true test progress.
+// A row with only a code is still considered replaceable when the user searches a reception.
+const hasCompressionProgressData = (item: CompressionFormInputs['items'][number] | undefined): boolean => {
+    if (!item) return false;
+
+    const textFields = [
+        item.hora_ensayo,
+        item.tipo_fractura,
+        item.defectos,
+        item.defectos_custom,
+        item.realizado,
+        item.revisado,
+        item.aprobado,
+    ];
+
+    if (textFields.some((value) => typeof value === 'string' && value.trim() !== '')) {
+        return true;
+    }
+
+    const numericFields = [item.carga_maxima, item.diametro, item.area];
+    return numericFields.some((value) => value !== undefined && value !== null && String(value).trim() !== '');
+};
+
 const sanitizeCompressionItemsForSave = (
     items: CompressionFormInputs['items'] | undefined
 ): CompressionFormInputs['items'] => {
@@ -711,10 +734,13 @@ const CompressionForm: React.FC = () => {
                 // 2. Auto-fill Items/Samples
                 // Only if we don't have items or the first item is empty/default
                 const currentItems = watch('items');
-                const hasMeaningfulItems = currentItems.some((item) => hasCompressionItemData(item));
-                const isGridEmpty = !hasMeaningfulItems;
+                const hasMeaningfulProgress = currentItems.some((item) => hasCompressionProgressData(item));
+                const currentRecepcionId = watch('recepcion_id');
+                const shouldReplaceItems =
+                    !hasMeaningfulProgress ||
+                    (data.recepcion_id && String(currentRecepcionId || '') !== String(data.recepcion_id));
 
-                if (isGridEmpty && datosBackend.muestras && datosBackend.muestras.length > 0) {
+                if (shouldReplaceItems && datosBackend.muestras && datosBackend.muestras.length > 0) {
                     const muestrasOrdenadas = [...datosBackend.muestras].sort(
                         (a: any, b: any) => (Number(a?.item_numero) || 0) - (Number(b?.item_numero) || 0)
                     );
