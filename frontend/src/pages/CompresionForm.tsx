@@ -134,6 +134,20 @@ const formatLemCode = (value: string): string => {
     return clean;
 };
 
+const resolveOfficialLemCode = (sample: any): string => {
+    const officialLem = String(sample?.codigo_muestra_lem || '').trim().toUpperCase();
+    if (officialLem) {
+        return formatLemCode(officialLem);
+    }
+
+    const legacyLem = String(sample?.codigo_lem || '').trim().toUpperCase();
+    if (/^\d+-CO-\d{2}$/.test(legacyLem)) {
+        return legacyLem;
+    }
+
+    return '';
+};
+
 const hasCompressionItemData = (item: CompressionFormInputs['items'][number] | undefined): boolean => {
     if (!item) return false;
 
@@ -746,7 +760,7 @@ const CompressionForm: React.FC = () => {
                     );
                     const nuevosItems = muestrasOrdenadas.map((m: any, idx: number) => ({
                         item: Number(m.item_numero ?? idx + 1),
-                        codigo_lem: formatLemCode(m.codigo_lem || m.codigo_muestra_lem || ''),
+                        codigo_lem: resolveOfficialLemCode(m),
                         fecha_ensayo_programado: pickFechaProgramada(m, datosBackend.fecha_recepcion),
                         fecha_ensayo: pickFechaEnsayo(m, datosBackend.fecha_recepcion),
                         hora_ensayo: '',
@@ -807,7 +821,7 @@ const CompressionForm: React.FC = () => {
                     );
                     const nuevosItems = samplesOrdenados.map((item: any, idx: number) => ({
                         item: Number(item.item_numero ?? idx + 1),
-                        codigo_lem: formatLemCode(item.codigo_lem || item.codigo_muestra_lem || ''),
+                        codigo_lem: resolveOfficialLemCode(item),
                         fecha_ensayo_programado: pickFechaProgramada(item, orden.fecha_recepcion),
                         fecha_ensayo: pickFechaEnsayo(item, orden.fecha_recepcion),
                         hora_ensayo: '',
