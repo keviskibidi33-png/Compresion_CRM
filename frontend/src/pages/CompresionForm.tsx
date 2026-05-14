@@ -134,30 +134,93 @@ const formatLemCode = (value: string): string => {
     return clean;
 };
 
+const isOfficialCompressionCode = (value: unknown): boolean => {
+    const codigo = String(value || '').trim().toUpperCase();
+    return /^\d+-CO-\d{2}$/.test(codigo);
+};
+
 const resolveOfficialLemCode = (sample: any): string => {
     const officialLem = String(sample?.codigo_muestra_lem || '').trim().toUpperCase();
-    if (officialLem) {
-        return formatLemCode(officialLem);
+    if (isOfficialCompressionCode(officialLem)) {
+        return officialLem;
     }
 
     const legacyLem = String(sample?.codigo_lem || '').trim().toUpperCase();
-    if (/^\d+-CO-\d{2}$/.test(legacyLem)) {
+    if (isOfficialCompressionCode(legacyLem)) {
         return legacyLem;
     }
 
     return '';
 };
 
+const buildImportedCompressionItems = (
+    samples: any[],
+    fallbackDate: string | undefined,
+    pickProgramada: (sample: any, fallback?: string) => string,
+    pickEnsayo: (sample: any, fallback?: string) => string
+): CompressionFormInputs['items'] => {
+    const samplesOrdenados = [...samples].sort(
+        (a: any, b: any) => (Number(a?.item_numero) || 0) - (Number(b?.item_numero) || 0)
+    );
+
+    return samplesOrdenados.map((sample: any, idx: number) => ({
+        item: Number(sample.item_numero ?? idx + 1),
+        codigo_lem: resolveOfficialLemCode(sample),
+        fecha_ensayo_programado: pickProgramada(sample, fallbackDate),
+        fecha_ensayo: pickEnsayo(sample, fallbackDate),
+        hora_ensayo: '',
+        carga_maxima: undefined,
+        tipo_fractura: '',
+        defectos: '',
+        defectos_custom: '',
+        realizado: '',
+        revisado: '',
+        fecha_revisado: '',
+        aprobado: '',
+        fecha_aprobado: '',
+        diametro: undefined,
+        area: undefined
+    }));
+};
+
+const mergeImportedItemsWithCurrentProgress = (
+    currentItems: CompressionFormInputs['items'],
+    importedItems: CompressionFormInputs['items']
+): CompressionFormInputs['items'] => {
+    const currentByItem = new Map<number, CompressionFormInputs['items'][number]>();
+    (currentItems || []).forEach((item) => {
+        const itemNumber = Number(item?.item);
+        if (Number.isFinite(itemNumber) && itemNumber > 0) {
+            currentByItem.set(itemNumber, item);
+        }
+    });
+
+    return importedItems.map((importedItem) => {
+        const currentItem = currentByItem.get(Number(importedItem.item));
+        if (!currentItem) {
+            return importedItem;
+        }
+
+        const currentCode = isOfficialCompressionCode(currentItem.codigo_lem)
+            ? (currentItem.codigo_lem || '').trim().toUpperCase()
+            : '';
+
+        return {
+            ...currentItem,
+            item: importedItem.item,
+            codigo_lem: importedItem.codigo_lem || currentCode || '',
+            fecha_ensayo_programado:
+                currentItem.fecha_ensayo_programado || importedItem.fecha_ensayo_programado,
+            fecha_ensayo: currentItem.fecha_ensayo || importedItem.fecha_ensayo,
+        };
+    });
+};
+
 const hasCompressionItemData = (item: CompressionFormInputs['items'][number] | undefined): boolean => {
     if (!item) return false;
 
     const codigoLem = (item.codigo_lem || '').trim().toUpperCase();
-    const codigoEsPlaceholder =
-        codigoLem === '' ||
-        codigoLem === '-' ||
-        /^X{2,}(?:-CO(?:-\d{2})?)?$/.test(codigoLem);
-
-    const tieneCodigoUtil = !codigoEsPlaceholder;
+    const tieneCodigoUtil = isOfficialCompressionCode(codigoLem);
 
     const textFields = [
         item.hora_ensayo,
@@ -174,13 +237,23 @@ const hasCompressionItemData = (item: CompressionFormInputs['items'][number] | u
     }
 
     const numericFields = [item.carga_maxima, item.diametro, item.area];
-    return numericFields.some((value) => value !== undefined && value !== null && String(value).trim() !== '');
+    return numericFields.some((value) => {
+        if (value === undefined || value === null) return false;
+        const normalized = String(value).trim();
+        if (normalized === '') return false;
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) && parsed !== 0;
+    });
 };
 
 // Used only to decide whether a loaded draft already has true test progress.
-// A row with only a code is still considered replaceable when the user searches a reception.
+// Legacy codes like 053 plus default values are replaceable; official LEM codes and
+// real test data count as meaningful progress.
 const hasCompressionProgressData = (item: CompressionFormInputs['items'][number] | undefined): boolean => {
     if (!item) return false;
+
+    const codigoLem = (item.codigo_lem || '').trim().toUpperCase();
+    const tieneCodigoUtil = isOfficialCompressionCode(codigoLem);
 
     const textFields = [
         item.hora_ensayo,
@@ -197,7 +270,17 @@ const hasCompressionProgressData = (item: CompressionFormInputs['items'][number]
     }
 
     const numericFields = [item.carga_maxima, item.diametro, item.area];
-    return numericFields.some((value) => value !== undefined && value !== null && String(value).trim() !== '');
+    if (numericFields.some((value) => {
+        if (value === undefined || value === null) return false;
+        const normalized = String(value).trim();
+        if (normalized === '') return false;
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) && parsed !== 0;
+    })) {
+        return true;
+    }
+
+    return tieneCodigoUtil;
 };
 
 const sanitizeCompressionItemsForSave = (
@@ -754,31 +837,27 @@ const CompressionForm: React.FC = () => {
                     !hasMeaningfulProgress ||
                     (data.recepcion_id && String(currentRecepcionId || '') !== String(data.recepcion_id));
 
-                if (shouldReplaceItems && datosBackend.muestras && datosBackend.muestras.length > 0) {
-                    const muestrasOrdenadas = [...datosBackend.muestras].sort(
-                        (a: any, b: any) => (Number(a?.item_numero) || 0) - (Number(b?.item_numero) || 0)
+                if (datosBackend.muestras && datosBackend.muestras.length > 0) {
+                    const importedItems = buildImportedCompressionItems(
+                        datosBackend.muestras,
+                        datosBackend.fecha_recepcion,
+                        pickFechaProgramada,
+                        pickFechaEnsayo
                     );
-                    const nuevosItems = muestrasOrdenadas.map((m: any, idx: number) => ({
-                        item: Number(m.item_numero ?? idx + 1),
-                        codigo_lem: resolveOfficialLemCode(m),
-                        fecha_ensayo_programado: pickFechaProgramada(m, datosBackend.fecha_recepcion),
-                        fecha_ensayo: pickFechaEnsayo(m, datosBackend.fecha_recepcion),
-                        hora_ensayo: '',
-                        carga_maxima: undefined,
-                        tipo_fractura: '',
-                        defectos: '',
-                        defectos_custom: '',
-                        realizado: '',
-                        revisado: '',
-                        fecha_revisado: '',
-                        aprobado: '',
-                        fecha_aprobado: '',
-                        diametro: undefined,
-                        area: undefined
-                    }));
+                    const nextItems = shouldReplaceItems
+                        ? importedItems
+                        : mergeImportedItemsWithCurrentProgress(currentItems, importedItems);
 
-                    setValue('items', nuevosItems);
-                    toast.success(`${nuevosItems.length} muestras importadas automáticamente`);
+                    replace(nextItems);
+
+                    const invalidCount = importedItems.filter((item) => !isOfficialCompressionCode(item.codigo_lem)).length;
+                    if (invalidCount > 0) {
+                        toast.warning(
+                            `${invalidCount} muestras sin Código LEM oficial fueron omitidas o quedaron vacías`
+                        );
+                    }
+
+                    toast.success(`${nextItems.length} muestras importadas automáticamente`);
                 }
 
 
@@ -801,7 +880,7 @@ const CompressionForm: React.FC = () => {
                 mensaje: '⚠️ Error de conexión - Verifique manualmente'
             });
         }
-    }, [setValue, watch]);
+    }, [setValue, watch, replace]);
 
     // Función para importar muestras desde la recepción
     const importarMuestras = async () => {
@@ -816,30 +895,24 @@ const CompressionForm: React.FC = () => {
             if (orden) {
                 const samples = orden.muestras || orden.items || [];
                 if (samples.length > 0) {
-                    const samplesOrdenados = [...samples].sort(
-                        (a: any, b: any) => (Number(a?.item_numero) || 0) - (Number(b?.item_numero) || 0)
+                    const importedItems = buildImportedCompressionItems(
+                        samples,
+                        orden.fecha_recepcion,
+                        pickFechaProgramada,
+                        pickFechaEnsayo
                     );
-                    const nuevosItems = samplesOrdenados.map((item: any, idx: number) => ({
-                        item: Number(item.item_numero ?? idx + 1),
-                        codigo_lem: resolveOfficialLemCode(item),
-                        fecha_ensayo_programado: pickFechaProgramada(item, orden.fecha_recepcion),
-                        fecha_ensayo: pickFechaEnsayo(item, orden.fecha_recepcion),
-                        hora_ensayo: '',
-                        carga_maxima: undefined,
-                        tipo_fractura: '',
-                        defectos: '',
-                        defectos_custom: '',
-                        realizado: '',
-                        revisado: '',
-                        fecha_revisado: '',
-                        aprobado: '',
-                        fecha_aprobado: '',
-                        diametro: undefined,
-                        area: undefined
-                    }));
+                    const nextItems = mergeImportedItemsWithCurrentProgress(watch('items'), importedItems);
 
-                    setValue('items', nuevosItems);
-                    toast.success(`${nuevosItems.length} muestras importadas correctamente`);
+                    replace(nextItems);
+
+                    const invalidCount = importedItems.filter((item) => !isOfficialCompressionCode(item.codigo_lem)).length;
+                    if (invalidCount > 0) {
+                        toast.warning(
+                            `${invalidCount} muestras sin Código LEM oficial fueron omitidas o quedaron vacías`
+                        );
+                    }
+
+                    toast.success(`${nextItems.length} muestras importadas correctamente`);
                 } else {
                     toast.error('No se encontraron muestras en esta recepción');
                 }

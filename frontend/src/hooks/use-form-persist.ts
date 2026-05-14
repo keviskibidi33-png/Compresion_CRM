@@ -4,15 +4,23 @@ import { UseFormReturn, FieldValues, DefaultValues } from 'react-hook-form';
 const hasNonEmptyString = (value: unknown): boolean =>
     typeof value === 'string' && value.trim() !== '';
 
+const isOfficialCompressionCode = (value: unknown): boolean => {
+    const codigo = String(value || '').trim().toUpperCase();
+    return /^\d+-CO-\d{2}$/.test(codigo);
+};
+
+const hasMeaningfulNumber = (value: unknown): boolean => {
+    if (value === undefined || value === null) return false;
+    const normalized = String(value).trim();
+    if (normalized === '') return false;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) && parsed !== 0;
+};
+
 const hasCompressionItemData = (item: any): boolean => {
     if (!item || typeof item !== 'object') return false;
 
-    const codigoLem = String(item.codigo_lem || '').trim().toUpperCase();
-    const codigoEsPlaceholder =
-        codigoLem === '' ||
-        codigoLem === '-' ||
-        /^X{2,}(?:-CO(?:-\d{2})?)?$/.test(codigoLem);
-    const tieneCodigoUtil = !codigoEsPlaceholder;
+    const tieneCodigoUtil = isOfficialCompressionCode(item.codigo_lem);
 
     const stringFields = [
         'fecha_ensayo_programado',
@@ -31,7 +39,7 @@ const hasCompressionItemData = (item: any): boolean => {
     if (tieneCodigoUtil || stringFields.some((field) => hasNonEmptyString(item[field]))) return true;
 
     const numericFields = ['carga_maxima', 'diametro', 'area'];
-    return numericFields.some((field) => item[field] !== undefined && item[field] !== null && String(item[field]).trim() !== '');
+    return numericFields.some((field) => hasMeaningfulNumber(item[field]));
 };
 
 const sanitizeCompressionItems = (items: any[]): any[] => {
